@@ -10,6 +10,7 @@ data class ActionCard(val title: String, val description: String, val action: St
     companion object {
         const val ADD_PROVIDER = "add_provider"
         const val BUFFER_SETTINGS = "buffer_settings"
+        const val CHECK_UPDATES = "check_updates"
     }
 }
 

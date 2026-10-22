@@ -11,10 +11,15 @@ import androidx.leanback.widget.ListRow
 import androidx.leanback.widget.ListRowPresenter
 import androidx.leanback.widget.OnItemViewClickedListener
 import androidx.lifecycle.lifecycleScope
+import com.tytv.app.R
 import com.tytv.app.data.ProviderStore
 import com.tytv.app.model.Channel
 import com.tytv.app.parser.M3uParser
 import com.tytv.app.settings.BufferSettings
+import com.tytv.app.update.UpdateCheckResult
+import com.tytv.app.update.UpdateChecker
+import com.tytv.app.update.UpdateDialog
+import com.tytv.app.update.UpdateFlow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -42,6 +47,7 @@ class MainFragment : BrowseSupportFragment() {
                         startActivity(Intent(requireContext(), AddProviderActivity::class.java))
                     ActionCard.BUFFER_SETTINGS ->
                         startActivity(Intent(requireContext(), BufferSettingsActivity::class.java))
+                    ActionCard.CHECK_UPDATES -> checkForUpdatesManually()
                 }
                 is Channel -> startActivity(PlaybackActivity.intent(requireContext(), item))
             }
@@ -51,6 +57,36 @@ class MainFragment : BrowseSupportFragment() {
     override fun onResume() {
         super.onResume()
         loadChannels()
+    }
+
+    /**
+     * Manual check: always reports a result — an update dialog, an
+     * "up to date" toast, or a "couldn't check" toast. Never silent.
+     */
+    private fun checkForUpdatesManually() {
+        val activity = requireActivity()
+        lifecycleScope.launch {
+            when (val result = UpdateChecker.check(requireContext())) {
+                is UpdateCheckResult.Available -> {
+                    // requireActivity() is a FragmentActivity (host is MainActivity).
+                    UpdateDialog.show(activity, result.info) {
+                        UpdateFlow.start(activity, result.info)
+                    }
+                }
+                is UpdateCheckResult.UpToDate ->
+                    Toast.makeText(
+                        requireContext(),
+                        R.string.update_up_to_date,
+                        Toast.LENGTH_SHORT
+                    ).show()
+                is UpdateCheckResult.Failed ->
+                    Toast.makeText(
+                        requireContext(),
+                        R.string.update_check_failed,
+                        Toast.LENGTH_LONG
+                    ).show()
+            }
+        }
     }
 
     private fun loadChannels() {
@@ -87,6 +123,16 @@ class MainFragment : BrowseSupportFragment() {
                     "Buffer size",
                     "Current: ${BufferSettings.get(requireContext()).label}",
                     ActionCard.BUFFER_SETTINGS
+                )
+            )
+            add(
+                ActionCard(
+                    getString(R.string.check_updates_title),
+                    getString(
+                        R.string.check_updates_version,
+                        UpdateChecker.installedVersionName(requireContext()) ?: "?"
+                    ),
+                    ActionCard.CHECK_UPDATES
                 )
             )
         }

@@ -1,4 +1,72 @@
-# TYTV Android — foundation status (verified in files, updated Oct 22, 2026 ~2:25 PM ET)
+# TYTV Android — foundation status (verified in files, updated Oct 22, 2026 ~12:20 PM ET)
+
+## UPDATER SLICE — Oct 22, 2026 (built, NOT device-tested, NOT pushed)
+- What it does: silent version check on app launch (UI only when an
+  update is available) + manual "Check for updates" card on the Setup row
+  (always reports: available / up to date / couldn't check). Update flow:
+  D-pad dialog (Update/Later, back dismisses) → one-time system
+  "install unknown apps" gate → download to app-private storage →
+  system install prompt (the user's confirmation; never silent install).
+- New files: `app/src/main/java/com/tytv/app/update/` — VersionInfo.kt
+  (pure-Kotlin descriptor parse + version compare, JVM-testable),
+  UpdateChecker.kt (raw.githubusercontent fetch off the main thread,
+  never throws), UpdateInstaller.kt (HttpURLConnection download +
+  FileProvider install intent), UpdateDialog.kt (framework AlertDialog —
+  NOT AppCompat, which needs an AppCompat theme this Leanback app lacks),
+  UpdateFlow.kt (shared orchestration). Plus `version.json` (project root:
+  versionCode 1, versionName 0.1.0, apkUrl =
+  https://github.com/smartaislemenu/TyTv/releases/latest/download/tytv.apk
+  — a placeholder until the first real release; unreachable URL = failed
+  check, never a loop or crash), `app/src/main/res/xml/file_paths.xml`,
+  `app/src/test/java/com/tytv/app/UpdateCheckerTest.kt`.
+- Changed: AndroidManifest.xml (+REQUEST_INSTALL_PACKAGES, FileProvider
+  `com.tytv.app.fileprovider`), MainActivity (silent launch check),
+  MainFragment + CardPresenter ("Check for updates" card, current version
+  in its description), strings.xml (13 update strings), README.md
+  (Updates section + signing-key rule; Firestick refs → Onn box).
+- Signing-key rule (also in README): an update installs ONLY when signed
+  with the SAME key as the installed app. Current builds use the debug
+  key; a permanent release key is a later decision and must never change
+  after that, or updates fail and require uninstall/reinstall.
+- Verified (all actually run, Oct 22): kotlinc clean (one lambda bug
+  found and fixed during compile; one always-true check simplified —
+  final compile zero errors, zero warnings); JVM mirror of every
+  UpdateCheckerTest assertion — 16/16 PASSED; aapt2 link regenerated
+  R.java with the new strings + file_paths; FileProvider confirmed in
+  the linked manifest; apksigner verify passes (v1+v2+v3, 1 signer);
+  badging: package com.tytv.app, versionCode 1, versionName 0.1.0,
+  targetSdk 34, leanback-launchable MainActivity, touchscreen NOT
+  required, permissions exactly INTERNET + ACCESS_NETWORK_STATE +
+  REQUEST_INSTALL_PACKAGES; dex spot-check: all 10 update classes
+  present; version.json is NOT inside the APK (correct — it is fetched
+  from GitHub at runtime); file audit: all new/changed files text, no
+  secrets, no credentials, no absolute local paths, local.properties
+  untouched.
+- Built APK (local only, NOT pushed, NOT the project APK):
+  `~/tytv-build/apk/tytv-updater.apk` (6,925,037 bytes). The project
+  `~/workspace/tytv-android/tytv-debug.apk` (foundation build) was NOT
+  overwritten.
+- Manual-pipeline lessons (do not repeat the detours):
+  1. aapt2 link MUST pass `--min-sdk-version 21 --target-sdk-version 34`
+     or it adds legacy implied permissions (READ/WRITE_EXTERNAL_STORAGE,
+     READ_PHONE_STATE) and leaves targetSdk unset; with the flags the
+     permission set matches the foundation APK exactly.
+  2. Exclude `media-1.7.0.zip` from the link inputs: its values.xml
+     conflicts with appcompat's (primary/secondary_text_default_material_dark,
+     cancel_button_image_alpha) and fails the merge.
+  3. d8 35.0.0 rejects a loose directory of .class files ("Unsupported
+     source file type") — jar the staged classes first, strip all
+     non-.class files (kotlin_builtins, .knm, .bin, META-INF), and
+     exclude checker-qual (duplicates jsr305) and library R classes.
+  4. d8 emits multi-dex (classes.dex + classes2.dex); add BOTH at the
+     APK root (zip without directory prefixes).
+  5. apksigner/zipalign need java on PATH (Temurin JDK 17 bin dir).
+- STILL UNVERIFIED (honest, same as foundation): nothing here has run on
+  a device. The updater dialog, download, and install prompt are
+  code-reviewed and compile-verified only; the Onn-box test is what
+  proves them. The version.json URL currently 404s (nothing pushed),
+  so until the first release the updater reports "couldn't check" on
+  manual checks and stays silent on launch — by design.
 
 ## FOUNDATION APK BUILT — Oct 22, 2026
 - Signed debug APK: `~/workspace/tytv-android/tytv-debug.apk` (6,909,389 bytes,
@@ -46,7 +114,8 @@
 - STILL UNVERIFIED (honest): playback on a real stream and D-pad navigation on
   a real TV remote — no emulator (no KVM) and no device in this VM. The APK
   installs and launches per its manifest/dex verification, but it has NOT been
-  run. Do not claim it plays video until a Fire TV / Android TV test happens.
+  run. Do not claim it plays video until an Onn box (Android TV /
+  Google TV) test happens.
 
 ## What exists (all read and verified, not assumed)
 
@@ -94,9 +163,11 @@
 
 ## Still to do (next slices, after a verified foundation build)
 
-1. In-app updater (version check → download → install prompt).
+1. In-app updater — DONE Oct 22 (see Updater slice section above; built
+   and verified in files, NOT device-tested, NOT pushed).
 2. EPG (URL + XMLTV upload) and program guide.
 3. Sports / Movies / Series sections, favorites, color themes.
 4. Dual/Quad multi-view (multiple ExoPlayer instances).
-5. Real-device test: install on a Fire TV, verify D-pad + playback.
+5. Real-device test: install on an Onn box (Android TV / Google TV),
+   verify D-pad + playback.
 6. Signing config + Downloader-code hosting decision (needs the user).
