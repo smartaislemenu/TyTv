@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TYTV</string>
+    <string name="add_provider_title">Add provider</string>
+    <string name="provider_name_hint">Provider name</string>
+    <string name="provider_url_hint">M3U URL (http://…/playlist.m3u)</string>
+    <string name="save_provider">Save provider</string>
+    <string name="buffer_title">Buffer size</string>
+    <string name="buffer_low">Low — 4s ahead</string>
+    <string name="buffer_balanced">Balanced — 10s ahead</string>
+    <string name="buffer_high">High — 30s ahead</string>
+    <string name="buffer_extra">Extra — 60s ahead</string>
+</resources>
