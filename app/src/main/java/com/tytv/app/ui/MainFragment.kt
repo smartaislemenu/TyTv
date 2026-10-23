@@ -112,7 +112,11 @@ class MainFragment : Fragment() {
             onClick = { channel -> ChannelMenu.play(requireContext(), channel) },
             onLongPress = { channel ->
                 ChannelMenu.show(requireContext(), channel) { applySection() }
-            }
+            },
+            // The adapter is a plain nested class (Kotlin forbids class
+            // declarations inside an inner class), so the section it
+            // renders under arrives as a lambda read at bind time.
+            currentSection = { currentSection }
         )
         channelList.adapter = channelAdapter
 
@@ -386,9 +390,10 @@ class MainFragment : Fragment() {
         override fun getItemCount(): Int = titles.size
     }
 
-    private inner class ChannelAdapter(
+    private class ChannelAdapter(
         private val onClick: (Channel) -> Unit,
-        private val onLongPress: (Channel) -> Unit
+        private val onLongPress: (Channel) -> Unit,
+        private val currentSection: () -> Section
     ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
         private var items: List<DisplayItem> = emptyList()
@@ -458,7 +463,7 @@ class MainFragment : Fragment() {
                     row.sub.text = when {
                         // Sports rows carry a red LIVE badge while a
                         // programme is on, like the reference cards.
-                        guideLine != null && currentSection == Section.SPORTS -> {
+                        guideLine != null && currentSection() == Section.SPORTS -> {
                             val badge = SpannableString("● LIVE  ")
                             badge.setSpan(
                                 ForegroundColorSpan(0xFFFF5252.toInt()),
@@ -483,7 +488,8 @@ class MainFragment : Fragment() {
                     row.name.text = game.headline
                     row.sub.text = "${game.league} • ${game.status}"
                     holder.itemView.setOnClickListener {
-                        startActivity(Intent(requireContext(), ScoresActivity::class.java))
+                        val context = holder.itemView.context
+                        context.startActivity(Intent(context, ScoresActivity::class.java))
                     }
                     holder.itemView.setOnLongClickListener(null)
                 }

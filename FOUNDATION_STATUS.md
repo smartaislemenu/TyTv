@@ -441,3 +441,22 @@
   run that reaches the unit tests (run 6 died before tests ran, so
   ScoresAndSurfTest + the org.json test dependency are still
   unverified at this writing).
+- CI RUN 7 FAILED (Oct 23, fix commit 5a50bc38): compileDebugKotlin,
+  9 errors in 3 files — all from the upgrades batch, all fixed:
+  (1) MainFragment ChannelAdapter Holders: plain classes inside an
+  `inner` class are illegal in Kotlin ("Class is not allowed here"
+  — the codebase's other adapters all declare their holders
+  `inner`). Fix: ChannelAdapter is now a plain nested class; the
+  section it renders under arrives as a () -> Section lambda read
+  at bind time, and the Scores row starts its activity from the
+  row view's context. (2) PlaybackActivity double-Back: the lambda
+  addCallback overload lives in activity-ktx, which the app does
+  not depend on — replaced with an explicit OnBackPressedCallback
+  object (which also fixes the isEnabled reference). (3)
+  PlaybackActivity banner hide: View has no
+  removeCallbacksAndMessages (that is a Handler method) — replaced
+  with a stored hideBannerRunnable + removeCallbacks. (4)
+  SettingsActivity BuildConfig: the generate task never ran, so
+  build.gradle now explicitly enables buildFeatures.buildConfig.
+  The rest of the batch compiled clean in the same pass, so run 8
+  should be the first full green run (tests included).

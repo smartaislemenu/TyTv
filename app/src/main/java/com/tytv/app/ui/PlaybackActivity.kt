@@ -14,6 +14,7 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.AudioAttributes
@@ -98,6 +99,8 @@ class PlaybackActivity : FragmentActivity() {
     private var channelTvgId: String? = null
     private var channelProvider = ""
     private var lastBackMs = 0L
+    /** Hides the channel banner; stored so a restart can cancel it. */
+    private val hideBannerRunnable = Runnable { channelNameView.visibility = View.GONE }
 
     /** Surf order + position within it; empty until the live list loads. */
     private var surfList: List<Channel> = emptyList()
@@ -228,21 +231,25 @@ class PlaybackActivity : FragmentActivity() {
         // Double-press Back to leave the player: a single Back only
         // shows the controller and a hint, so an accidental press
         // never dumps the viewer out of the channel.
-        onBackPressedDispatcher.addCallback(this) {
-            val now = System.currentTimeMillis()
-            if (now - lastBackMs < 2000) {
-                isEnabled = false
-                onBackPressedDispatcher.onBackPressed()
-            } else {
-                lastBackMs = now
-                playerView.showController()
-                Toast.makeText(
-                    this@PlaybackActivity,
-                    R.string.player_back_again_to_exit,
-                    Toast.LENGTH_SHORT
-                ).show()
+        // Explicit callback object: the lambda addCallback overload
+        // lives in activity-ktx, which this app does not depend on.
+        onBackPressedDispatcher.addCallback(object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                val now = System.currentTimeMillis()
+                if (now - lastBackMs < 2000) {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                } else {
+                    lastBackMs = now
+                    playerView.showController()
+                    Toast.makeText(
+                        this@PlaybackActivity,
+                        R.string.player_back_again_to_exit,
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
             }
-        }
+        })
         playerView.setControllerVisibilityListener(
             PlayerView.ControllerVisibilityListener { visibility ->
                 actionBar.visibility = visibility
@@ -345,8 +352,10 @@ class PlaybackActivity : FragmentActivity() {
         // Re-show the banner on every (re)start, clearing any hide
         // queued by the previous channel so it is not cut short.
         channelNameView.visibility = View.VISIBLE
-        channelNameView.removeCallbacksAndMessages(null)
-        channelNameView.postDelayed({ channelNameView.visibility = View.GONE }, 5000)
+        // View has no removeCallbacksAndMessages (that is a Handler
+        // method) — cancel the stored runnable instead.
+        channelNameView.removeCallbacks(hideBannerRunnable)
+        channelNameView.postDelayed(hideBannerRunnable, 5000)
         if (!local && channelKind == ChannelKind.LIVE) {
             RecentStore.record(
                 this,
