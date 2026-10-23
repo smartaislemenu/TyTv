@@ -14,7 +14,26 @@ import java.io.File
 object EpgStore {
     private const val PREFS = "tytv_prefs"
     private const val KEY_GLOBAL_URL = "epg_global_url"
+    private const val KEY_TIME_OFFSET_HOURS = "epg_time_offset_hours"
     private const val DIR = "epg-cache"
+
+    /**
+     * Shift applied to displayed programme times, in milliseconds.
+     * Some providers publish guide times off by a fixed number of
+     * hours; the offset (set in Settings, may be negative) corrects
+     * them at lookup time. The stored guide data stays pristine.
+     */
+    @Volatile var timeOffsetMs: Long = 0L
+
+    fun getTimeOffsetHours(context: Context): Int =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getInt(KEY_TIME_OFFSET_HOURS, 0)
+
+    fun setTimeOffsetHours(context: Context, hours: Int) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putInt(KEY_TIME_OFFSET_HOURS, hours).apply()
+        timeOffsetMs = hours * 3_600_000L
+    }
 
     private val lock = Object()
     private val indices = mutableMapOf<String, EpgMatcher.Index>()
@@ -59,10 +78,18 @@ object EpgStore {
         }
     }
 
-    /** Programmes for one channel from whatever guides are loaded, or null. */
+    /** Programmes for one channel from whatever guides are loaded, or null.
+     *  Returned times carry the configured time offset, so every
+     *  consumer (guide, player info, home rows) sees corrected times
+     *  without any call-site changes. */
     fun findFor(channel: Channel): List<EpgProgramme>? {
         val snapshot = indicesSnapshot()
         if (snapshot.isEmpty()) return null
-        return EpgMatcher.findFor(channel, snapshot)
+        val programmes = EpgMatcher.findFor(channel, snapshot) ?: return null
+        val offset = timeOffsetMs
+        if (offset == 0L) return programmes
+        return programmes.map {
+            it.copy(startMs = it.startMs + offset, endMs = it.endMs + offset)
+        }
     }
 }

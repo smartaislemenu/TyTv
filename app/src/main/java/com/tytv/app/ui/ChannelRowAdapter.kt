@@ -29,6 +29,7 @@ class ChannelRowAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_channel_row, parent, false)
+        FontApplier.apply(view)
         return Holder(view)
     }
 

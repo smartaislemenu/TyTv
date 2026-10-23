@@ -1,23 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Channel row: provider icon left, name + now/next right. The icon
+     comes from the provider's own feed (tvg-logo / stream icon);
+     rows without one simply show no image. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@drawable/item_focus_bg"
     android:focusable="true"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:padding="12dp">
 
-    <TextView
-        android:id="@+id/channel_name"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textColor="#FFFFFF"
-        android:textSize="18sp" />
+    <ImageView
+        android:id="@+id/channel_logo"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:contentDescription="@string/channel_logo_desc"
+        android:scaleType="fitCenter" />
 
-    <TextView
-        android:id="@+id/channel_sub"
-        android:layout_width="match_parent"
+    <LinearLayout
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:textColor="#9CA3AF"
-        android:textSize="14sp" />
+        android:layout_marginStart="12dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/channel_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="#FFFFFF"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/channel_sub"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="#9CA3AF"
+            android:textSize="15sp" />
+    </LinearLayout>
 </LinearLayout>

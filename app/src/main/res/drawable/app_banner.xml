@@ -1,4 +1,47 @@
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="rectangle">
-    <solid android:color="#111827" />
-</shape>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+    <!-- TYTV neon TV banner: the same artwork as the app icon and the
+         boot splash — dark navy ground, ambient blue glow, lettering
+         in halo / tube / white-core passes, neon underline. -->
+    <path
+        android:fillColor="#020617"
+        android:pathData="M0,0h320v180H0z" />
+    <path
+        android:pathData="M0,0h320v180H0z">
+        <gradient
+            android:centerX="0.5"
+            android:centerY="0.5"
+            android:endColor="#00000000"
+            android:gradientRadius="150"
+            android:startColor="#401D4ED8"
+            android:type="radial" />
+    </path>
+    <!-- Halo pass -->
+    <path
+        android:pathData="M97,57h27M110.5,57V126M130,54L143.5,84L157,54M143.5,84V126M163,57h27M176.5,57V126M196,54L209.5,126L223,54"
+        android:strokeColor="#2E1D4ED8"
+        android:strokeLineCap="butt"
+        android:strokeLineJoin="miter"
+        android:strokeWidth="27" />
+    <!-- Tube pass -->
+    <path
+        android:pathData="M97,57h27M110.5,57V126M130,54L143.5,84L157,54M143.5,84V126M163,57h27M176.5,57V126M196,54L209.5,126L223,54"
+        android:strokeColor="#0EA5E9"
+        android:strokeLineCap="butt"
+        android:strokeLineJoin="miter"
+        android:strokeWidth="13.5" />
+    <!-- White-hot core pass -->
+    <path
+        android:pathData="M97,57h27M110.5,57V126M130,54L143.5,84L157,54M143.5,84V126M163,57h27M176.5,57V126M196,54L209.5,126L223,54"
+        android:strokeColor="#F0F9FF"
+        android:strokeLineCap="butt"
+        android:strokeLineJoin="miter"
+        android:strokeWidth="6" />
+    <!-- Neon underline -->
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M120,140h80v3H120z" />
+</vector>

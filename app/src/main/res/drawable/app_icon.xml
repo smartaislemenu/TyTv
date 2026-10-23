@@ -3,10 +3,46 @@
     android:height="48dp"
     android:viewportWidth="48"
     android:viewportHeight="48">
+    <!-- TYTV neon logo: dark navy ground, ambient blue glow, and the
+         lettering drawn three times — wide translucent halo, sky-blue
+         tube, white-hot core — the same artwork as the TV banner and
+         the boot splash. -->
     <path
-        android:fillColor="#111827"
+        android:fillColor="#020617"
         android:pathData="M0,0h48v48H0z" />
     <path
-        android:fillColor="#F97316"
-        android:pathData="M20,14 L34,24 L20,34 z" />
+        android:pathData="M0,0h48v48H0z">
+        <gradient
+            android:centerX="0.5"
+            android:centerY="0.5"
+            android:endColor="#00000000"
+            android:gradientRadius="34"
+            android:startColor="#401D4ED8"
+            android:type="radial" />
+    </path>
+    <!-- Halo pass -->
+    <path
+        android:pathData="M4,13.75h9M8.5,13.75V36M15,12L19.5,22L24,12M19.5,22V36M26,13.75h9M30.5,13.75V36M37,12L41.5,36L46,12"
+        android:strokeColor="#2E1D4ED8"
+        android:strokeLineCap="butt"
+        android:strokeLineJoin="miter"
+        android:strokeWidth="9" />
+    <!-- Tube pass -->
+    <path
+        android:pathData="M4,13.75h9M8.5,13.75V36M15,12L19.5,22L24,12M19.5,22V36M26,13.75h9M30.5,13.75V36M37,12L41.5,36L46,12"
+        android:strokeColor="#0EA5E9"
+        android:strokeLineCap="butt"
+        android:strokeLineJoin="miter"
+        android:strokeWidth="4.5" />
+    <!-- White-hot core pass -->
+    <path
+        android:pathData="M4,13.75h9M8.5,13.75V36M15,12L19.5,22L24,12M19.5,22V36M26,13.75h9M30.5,13.75V36M37,12L41.5,36L46,12"
+        android:strokeColor="#F0F9FF"
+        android:strokeLineCap="butt"
+        android:strokeLineJoin="miter"
+        android:strokeWidth="2" />
+    <!-- Neon underline -->
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M14,41h20v1H14z" />
 </vector>

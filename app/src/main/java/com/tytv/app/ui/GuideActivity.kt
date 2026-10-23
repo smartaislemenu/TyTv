@@ -19,7 +19,9 @@ import com.tytv.app.data.ProviderStore
 import com.tytv.app.epg.EpgLoader
 import com.tytv.app.epg.EpgMatcher
 import com.tytv.app.epg.EpgParser
+import com.tytv.app.epg.EpgPreload
 import com.tytv.app.epg.EpgProgramme
+import com.tytv.app.model.CatchupUrl
 import com.tytv.app.epg.EpgStore
 import com.tytv.app.model.Channel
 import com.tytv.app.model.ChannelKind
@@ -87,9 +89,40 @@ class GuideActivity : FragmentActivity() {
         }
         programmeAdapter = ProgrammeAdapter { programme, isCurrent ->
             val channel = selected ?: return@ProgrammeAdapter
+            val now = System.currentTimeMillis()
             if (isCurrent) {
                 ChannelMenu.play(this, channel)
+            } else if (programme.endMs <= now) {
+                // Past programme: offer catch-up when the provider
+                // supports it, and say so plainly when it does not.
+                val catchupUrl = CatchupUrl.build(channel, programme.startMs, now)
+                val details = getString(
+                    R.string.guide_details,
+                    formatTimeRange(programme),
+                    programme.description.ifEmpty {
+                        getString(R.string.guide_no_description)
+                    }
+                )
+                val builder = AlertDialog.Builder(this)
+                    .setTitle(programme.title)
+                    .setMessage(
+                        if (catchupUrl == null) {
+                            "$details\n\n${getString(R.string.guide_no_catchup)}"
+                        } else {
+                            details
+                        }
+                    )
+                if (catchupUrl != null) {
+                    builder.setPositiveButton(R.string.guide_watch_from_start) { _, _ ->
+                        startActivity(
+                            PlaybackActivity.intent(this, channel.copy(url = catchupUrl))
+                        )
+                    }
+                }
+                builder.setNegativeButton(R.string.recording_cancel, null).show()
             } else {
+                // Future programme: watch live now, set a reminder,
+                // or schedule a recording from the reminder alert.
                 AlertDialog.Builder(this)
                     .setTitle(programme.title)
                     .setMessage(
@@ -101,7 +134,15 @@ class GuideActivity : FragmentActivity() {
                             }
                         )
                     )
-                    .setPositiveButton(R.string.recording_cancel, null)
+                    .setPositiveButton(R.string.channel_menu_play) { _, _ ->
+                        ChannelMenu.play(this, channel)
+                    }
+                    .setNeutralButton(R.string.reminder_remind_me) { _, _ ->
+                        ReminderScheduler.setReminder(this, channel, programme, false)
+                    }
+                    .setNegativeButton(R.string.reminder_record_it) { _, _ ->
+                        ReminderScheduler.setReminder(this, channel, programme, true)
+                    }
                     .show()
             }
         }
@@ -173,7 +214,14 @@ class GuideActivity : FragmentActivity() {
         if (programmes.isNullOrEmpty()) {
             programmeAdapter.submit(emptyList())
             emptyText.visibility = View.VISIBLE
-            emptyText.text = getString(R.string.guide_no_data, channel.name)
+            // Say plainly WHY it is empty: no address configured at
+            // all reads differently from an address that returned
+            // nothing for this channel.
+            emptyText.text = if (EpgPreload.noAddressProviders.contains(channel.provider)) {
+                getString(R.string.guide_no_address, channel.provider)
+            } else {
+                getString(R.string.guide_no_data, channel.name)
+            }
             return
         }
         emptyText.visibility = View.GONE
@@ -234,6 +282,7 @@ class GuideActivity : FragmentActivity() {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
             val view = LayoutInflater.from(parent.context)
                 .inflate(R.layout.item_channel_row, parent, false)
+            FontApplier.apply(view)
             return Holder(view)
         }
 
@@ -282,11 +331,13 @@ class GuideActivity : FragmentActivity() {
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
             val inflater = LayoutInflater.from(parent.context)
-            return if (viewType == 0) {
-                HeaderHolder(inflater.inflate(R.layout.item_group_header, parent, false))
+            val view = if (viewType == 0) {
+                inflater.inflate(R.layout.item_group_header, parent, false)
             } else {
-                RowHolder(inflater.inflate(R.layout.item_programme_row, parent, false))
+                inflater.inflate(R.layout.item_programme_row, parent, false)
             }
+            FontApplier.apply(view)
+            return if (viewType == 0) HeaderHolder(view) else RowHolder(view)
         }
 
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {

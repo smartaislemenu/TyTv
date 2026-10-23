@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Current programme block: gold tint so ON NOW stands out at a
+     glance; focus still shows the standard highlight. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_focused="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#374151" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#3B2F0B" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+</selector>

@@ -56,11 +56,17 @@ data class XtreamEpisode(val name: String, val url: String)
  */
 object XtreamClient {
 
+    /**
+     * Fetches live, VOD and series for one Xtream login. [onStage]
+     * fires after each section (live, vod, series) with the running
+     * channel count, so the UI can show progress on large accounts.
+     */
     suspend fun fetchAll(
         server: String,
         user: String,
         pass: String,
-        providerName: String
+        providerName: String,
+        onStage: ((String, Int) -> Unit)? = null
     ): PlaylistLoadResult {
         return try {
             withContext(Dispatchers.IO) {
@@ -81,6 +87,7 @@ object XtreamClient {
                     val item = live.optJSONObject(i) ?: continue
                     val id = item.optInt("stream_id", -1)
                     if (id < 0) continue
+                    val archive = item.optInt("tv_archive", 0) == 1
                     channels += Channel(
                         name = item.optString("name").ifEmpty { "Channel $id" },
                         url = XtreamUrls.liveUrl(server, user, pass, id),
@@ -88,10 +95,16 @@ object XtreamClient {
                         logo = item.optString("stream_icon").ifEmpty { null },
                         provider = providerName,
                         kind = ChannelKind.LIVE,
-                        tvgId = item.optString("epg_channel_id").ifEmpty { null }
+                        tvgId = item.optString("epg_channel_id").ifEmpty { null },
+                        number = item.optInt("num", 0).takeIf { it > 0 },
+                        catchupSource = if (archive) "xtream" else null,
+                        catchupHours = if (archive) {
+                            item.optInt("tv_archive_duration", 0).takeIf { it > 0 }
+                        } else null
                     )
                 }
 
+                onStage?.invoke("live", channels.size)
                 val vodCategories = fetchCategories(server, user, pass, "get_vod_categories")
                 val vod = fetchArray(server, user, pass, "get_vod_streams")
                 for (i in 0 until vod.length()) {
@@ -110,6 +123,7 @@ object XtreamClient {
                     )
                 }
 
+                onStage?.invoke("vod", channels.size)
                 val seriesCategories = fetchCategories(server, user, pass, "get_series_categories")
                 val series = fetchArray(server, user, pass, "get_series")
                 for (i in 0 until series.length()) {
@@ -127,6 +141,7 @@ object XtreamClient {
                     )
                 }
 
+                onStage?.invoke("series", channels.size)
                 PlaylistLoadResult.Success(channels)
             }
         } catch (e: Exception) {

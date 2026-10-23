@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- FileProvider paths: only the updates/ folder under app-private
-     external storage is ever shared, and only with the system installer. -->
+<!-- FileProvider paths: updates/ for the system installer, and the
+     backup/ cache folder for the user-initiated settings export. -->
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <external-files-path
         name="updates"
         path="updates/" />
+    <cache-path
+        name="backup"
+        path="backup/" />
 </paths>

@@ -69,8 +69,10 @@ object PlaylistLoader {
  * multi-MB playlist downloads again.
  *
  * Lines are tab-separated
- * `name\turl\tgroup\tlogo\tkind\tseriesId\ttvgId`
- * with tabs and newlines scrubbed from text fields on write.
+ * `name\turl\tgroup\tlogo\tkind\tseriesId\ttvgId\tnumber\tcatchupSource\tcatchupHours`
+ * with tabs and newlines scrubbed from text fields on write. Older
+ * cache files with only the first seven fields still load; the
+ * newer fields simply read as absent.
  */
 object PlaylistCache {
     private const val DIR = "playlist-cache"
@@ -100,7 +102,10 @@ object PlaylistCache {
                             clean(channel.logo),
                             channel.kind.name,
                             clean(channel.seriesId),
-                            clean(channel.tvgId)
+                            clean(channel.tvgId),
+                            channel.number?.toString() ?: "",
+                            clean(channel.catchupSource),
+                            channel.catchupHours?.toString() ?: ""
                         ).joinToString("\t")
                     )
                     out.newLine()
@@ -134,7 +139,10 @@ object PlaylistCache {
                         provider = providerName,
                         kind = kind,
                         seriesId = parts.getOrNull(5)?.ifEmpty { null },
-                        tvgId = parts.getOrNull(6)?.ifEmpty { null }
+                        tvgId = parts.getOrNull(6)?.ifEmpty { null },
+                        number = parts.getOrNull(7)?.toIntOrNull(),
+                        catchupSource = parts.getOrNull(8)?.ifEmpty { null },
+                        catchupHours = parts.getOrNull(9)?.toIntOrNull()
                     )
                 }
             }

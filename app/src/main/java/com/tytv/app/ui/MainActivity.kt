@@ -11,6 +11,24 @@ import com.tytv.app.update.UpdateFlow
 import kotlinx.coroutines.launch
 
 class MainActivity : FragmentActivity() {
+
+    private var splashHidden = false
+
+    /**
+     * Fades the boot splash out. Called the moment the first content
+     * renders (or the load ends empty) — idempotent, and never on a
+     * timer, so the splash shows only during a real load.
+     */
+    fun hideSplash() {
+        if (splashHidden) return
+        splashHidden = true
+        findViewById<android.view.View>(R.id.splash_overlay)?.let { overlay ->
+            overlay.animate().alpha(0f).setDuration(300L).withEndAction {
+                overlay.visibility = android.view.View.GONE
+            }.start()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)

@@ -306,3 +306,127 @@
   unreadable on the dark background — the type dropdown looked
   blank), visible focus background on the spinner, actionNext chain
   on the fields, and Done on the last field triggers Save.
+- UPGRADES BUILD (Oct 23, full batch, Tyler-authorized — NOT yet
+  CI-built at this writing): everything from the build #4 on-device
+  test findings plus the 8 missing-basics, built in one batch.
+  - First-load: ChannelRepository cache-first per provider with
+    progressive onProviderDone batches; MainFragment renders each
+    provider the moment its batch lands, with a live "Loading
+    <provider>… N channels so far" status; PlaylistLoader streams
+    line-by-line (onCount every 2,000 lines); Xtream fetchAll reports
+    live/vod/series stage counts. Cache format extended 7 -> 10
+    fields (adds kind, seriesId, tvgId, number, catchupSource,
+    catchupHours); old 7-field caches still load.
+  - Kinds/groups: M3uLineParser honors #EXTGRP standing groups,
+    double- AND single-quoted attrs, tvg-chno -> number,
+    catchup/catchup-source/catchup-days attrs; GroupKind.infer maps
+    movie/film/vod -> MOVIE, series/shows -> SERIES (Showtime stays
+    LIVE); Xtream maps num -> number, tv_archive -> catchupSource
+    "xtream" + tv_archive_duration -> catchupHours.
+  - Player: click auto-plays (already playWhenReady; spinner now
+    shows during STATE_BUFFERING so slow starts are visible);
+    double-Back to exit (first Back shows controls + toast, second
+    within 2s exits); info line shows "#number • name", Now/Next
+    with times + 160-char description; channel number carried in
+    the intent and shown in the banner.
+  - EPG: EpgPreload runs once per process after channels land
+    (cache files first, then async per-provider load); GuideActivity
+    empty state distinguishes "No guide address set" (provider has
+    no address anywhere) from "No guide data"; EpgStore time-offset
+    setting (-12..+12h) shifts displayed programmes without touching
+    stored data. Preload cannot invent data — M3U still needs an
+    address, Xtream auto-derives xmltv.php.
+  - UI: channel rows gain provider icon (LogoLoader: 4MB memory +
+    disk cache, 128px default, tag-guarded) + now/next sub-line;
+    group headers bolder gold; Movies/Series render as 4-column
+    poster grids (provider art at 360px, title-text tile when no
+    art — never invented posters); Sports rows with a current
+    programme get a red LIVE prefix. Sports is a second view:
+    GroupKind.isSports (league/network tokens; "sky" deliberately
+    excluded — Sky News false positive) feeds Sports while channels
+    stay in their Live TV groups.
+  - Scores zone: ScoresApi fetches ESPN's public scoreboard feeds
+    (NFL/NBA/MLB/NHL/college football/basketball, 60s cache, short
+    timeouts, never throws); Sports section leads with up to 12
+    live games; sidebar Scores opens ScoresActivity (grouped list,
+    60s refresh, plain failure message when the feed fails).
+    Scores are never linked to channels and never faked; toggle in
+    Settings (default on). Unit-tested parse incl. pre/live/final.
+  - Logo: app icon + TV banner redrawn as layered blue-neon TYTV
+    vectors (dark navy ground, radial ambient glow, halo/tube/
+    white-core letter passes, neon underline) — same artwork as
+    the boot splash. NeonLogoView draws the same design at runtime
+    with real blur glow; activity_main overlays it as the splash,
+    faded out by MainActivity.hideSplash() the moment content
+    renders (or the load ends empty) — real load only, no timer.
+    Vectors are text, so the snapshot push carries them; no binary
+    icon files are involved.
+  - Settings screen (replaces the Setup dialog menu): Add provider,
+    Buffer, Player (built-in/external), Font (4 options, applied
+    app-wide via TytvApplication + FontApplier at inflation
+    points), Global guide address, Guide time offset, Parental PIN
+    (PinPadDialog, 4-digit, session unlock), Locked groups,
+    Scores toggle, Reminders list/delete, Hidden channels, Rename
+    groups, Check for updates, Backup (FileProvider share; PIN
+    never exported), Restore (file picker; validates header),
+    About (uses BuildConfig.VERSION_NAME — AGP default
+    generateBuildConfig; verify at CI if the build complains).
+  - External player: ChannelMenu "Play externally" sends the DIRECT
+    stream URL via ACTION_VIEW chooser (VLC etc.); timeshift/record
+    stay built-in only. Known wart: EXTERNAL mode is checked before
+    the series-marker branch, so an Xtream series marker would be
+    handed externally — acceptable, markers are not playable URLs.
+  - Surfing: SurfOrder.liveOrder (home Live TV order, number-sorted
+    within groups) drives CH up/down + DPAD up/down (only when the
+    player controller is hidden); wrap-around; locked groups
+    skipped unless unlocked; Last button jumps to the previous
+    RecentStore entry (current entry is always the head); recents
+    capped at 20, also in the sidebar Recent section.
+  - Multi-view: 2/4-up tiles, plain ExoPlayers on direct URLs,
+    focused tile audible, others muted; click a filled tile for
+    full playback; empty tiles pick via SearchActivity pick mode
+    (PIN-gated before filling).
+  - Grid guide: 3-hour window from the current half-hour, 200dp per
+    30 min, shared horizontal scroll (header + rows), ON NOW gold
+    blocks, click current to play, others for details/reminders/
+    catch-up.
+  - Catch-up: CatchupUrl.build (xtream/append ?utc=&lutc=, or
+    template ${timestamp}/${start}/${end}/${offset}); Restart
+    button replays the current programme from its start; guide/grid
+    past-programme dialogs offer "Watch from start" when in window,
+    else say plainly it is unavailable. Playback keeps the live URL
+    as its identity during replay (recents/surf/Last unaffected).
+    Known wart: launching catch-up from a guide click plays the
+    replay URL as both stream and live URL, so surfing from that
+    entry keys on the replay URL.
+  - Continue watching: ContinueStore (30 entries, drops finished/
+    sub-30s saves); VOD (MOVIE kind incl. Xtream series episodes)
+    resumes with a "Resuming from M:SS" toast; Movies grid leads
+    with a Continue watching poster rail + progress bars.
+  - Reminders + scheduled recordings: ReminderStore + AlarmManager
+    setAlarmClock (exact in Doze) + ReminderReceiver (notification
+    + full-screen alert) + BootReceiver re-schedule; alert activity
+    fires once then deletes the reminder; Record-it opens the
+    channel with auto-record on first start. Background recording
+    was deliberately NOT built — it fails silently on many TV
+    boxes; the design is a reliable reminder + one tap to record.
+  - Parental PIN lock: groups locked per (provider, group) in
+    Settings; playback, multi-view fill, and Last-channel jumps all
+    PIN-gate; a correct PIN unlocks for the session only.
+  - Backup/restore: TYTV-BACKUP-1 text format over tytv_prefs +
+    tytv_channel_prefs (typed entries, Base64); PIN skipped on
+    export; restore validates the header and clears each section
+    before applying.
+  - Tests added: GroupKindAndCatchupTest (sports incl. Sky News
+    negative, catch-up URL exactness, window/template/no-source),
+    M3uLineParserTest extended (EXTGRP, single quotes + chno, kind
+    inference, catchup attrs), ScoresAndSurfTest (surf order,
+    score parse pre/live/final, bad-input safety). org.json added
+    as testImplementation only (android.jar stub throws in unit
+    tests). Recent/Continue stores are Android-Base64-bound and
+    intentionally untested at unit level.
+  - HONEST LIMITS: none of this has run on a box yet — same
+    code-review-only caveat as build #3. The neon vectors render
+    gradients only on API 24+ (minSdk 21); older devices still get
+    the solid ground + lettering. BuildConfig.VERSION_NAME and the
+    new vector drawables are the two things CI will confirm first.
