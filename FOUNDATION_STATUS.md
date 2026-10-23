@@ -430,3 +430,14 @@
     gradients only on API 24+ (minSdk 21); older devices still get
     the solid ground + lettering. BuildConfig.VERSION_NAME and the
     new vector drawables are the two things CI will confirm first.
+- CI RUN 6 FAILED (Oct 23, upgrades commit 0299162a): mergeDebugResources
+  died parsing the neon icon/banner vectors — the build tool's vector
+  parser NPEs inside addGradientIfExists on the <gradient> blocks
+  (a required gradient attribute is missing from its view; rather
+  than gamble another cycle on which one, the gradients are gone).
+  FIX: ambient glow is now two translucent discs (plain fills) behind
+  the unchanged halo/tube/core neon lettering — same look, no
+  gradient. Re-pushed as the fix commit; run 7 will also be the first
+  run that reaches the unit tests (run 6 died before tests ran, so
+  ScoresAndSurfTest + the org.json test dependency are still
+  unverified at this writing).

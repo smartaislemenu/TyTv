@@ -9,16 +9,15 @@
     <path
         android:fillColor="#020617"
         android:pathData="M0,0h320v180H0z" />
+    <!-- Layered ambient glow discs (plain fills: the build tool's
+         vector parser chokes on <gradient> here, so the glow is
+         translucent discs instead of a radial gradient). -->
     <path
-        android:pathData="M0,0h320v180H0z">
-        <gradient
-            android:centerX="0.5"
-            android:centerY="0.5"
-            android:endColor="#00000000"
-            android:gradientRadius="150"
-            android:startColor="#401D4ED8"
-            android:type="radial" />
-    </path>
+        android:fillColor="#0D1D4ED8"
+        android:pathData="M10,90a150,85 0 1,0 300,0a150,85 0 1,0 -300,0" />
+    <path
+        android:fillColor="#1A1D4ED8"
+        android:pathData="M50,90a110,62 0 1,0 220,0a110,62 0 1,0 -220,0" />
     <!-- Halo pass -->
     <path
         android:pathData="M97,57h27M110.5,57V126M130,54L143.5,84L157,54M143.5,84V126M163,57h27M176.5,57V126M196,54L209.5,126L223,54"
