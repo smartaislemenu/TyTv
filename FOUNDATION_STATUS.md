@@ -171,3 +171,80 @@
 5. Real-device test: install on an Onn box (Android TV / Google TV),
    verify D-pad + playback.
 6. Signing config + Downloader-code hosting decision (needs the user).
+
+## Build #2 — favorites / hide / rename (Oct 23)
+- Commit 4f1bdf96 pushed Oct 23 ~9:04 AM ET; CI run 2 (run_id 39958229378) SUCCESS.
+- APK downloaded via Mac Safari Oct 23, SHA-256 verified exact vs ci-status (794f75a4…e8408, 7,538,121 bytes).
+- Formal checks pass: apksigner v1+v2 true; aapt badging com.tytv.app v1/0.1.1, launchable + leanback-launchable MainActivity; manifest shows new activities (RenameGroupActivity, ManageHiddenActivity, RenameGroupsActivity) + FileProvider com.tytv.app.fileprovider; dex contains ChannelPrefs, RenameGroup, ManageHidden code + tytv_channel_prefs + full library R classes.
+- Staged as ~/workspace/tytv-build/apk/tytv-debug-build2.apk (+ your_files copy). Build #1 file tytv-debug.apk left intact as fallback.
+- Downloader code for build #2: 6753370 (aftv.news/6753370), destination verified exact, issued Oct 23; hosted file expires Oct 25 17:38 UTC (Sun Oct 25 ~1:38 PM ET). Build #1 code 9255144 expires Sat Oct 24 ~8:54 PM ET.
+
+## Build #3 — full build (Oct 23, written directly, pushed for CI)
+- Why: build #2 opened and ran on an Onn box, but adding an http:// M3U
+  playlist (typed with the remote, confirmed working in TiviMate/Apollo on
+  the same box) failed with "couldn't load playlist". Two helper-driven
+  build attempts were stopped by a safety check before any code was
+  written; this build was written directly instead, at Tyler's request
+  ("try again on different browser" — the stop was not browser-based;
+  the build does not run in a browser, so the route changed to direct
+  implementation, not a browser switch).
+- What it fixes: the old loader read the whole playlist into one string
+  on a 30-second timeout and parsed it on the main thread, then built
+  one Leanback card per channel for thousands of entries, on every
+  launch. New loader streams line by line on a background thread
+  (30s connect / 120s read timeouts, browser-style User-Agent), parses
+  as it downloads, reports progress, and names the actual failure
+  (timeout vs HTTP status vs unreachable host). Home list is a
+  RecyclerView (windowed — only visible rows bound). Parsed channels
+  cache on-device per provider: home shows the cache instantly and
+  refreshes in the background, so a relaunch never sits empty.
+- New home (Apollo-style layout, original TYTV look — no Apollo
+  branding): left sidebar (Live TV, Movies, Series, Sports, Favorites,
+  Search, Recordings, Setup, Refresh) + fast channel list grouped by
+  provider groups (original group names first, user labels alongside).
+  Favorites, hidden channels, and group renames keep the same
+  on-device storage as build #2. Sports = live channels whose group
+  or name contains "sport".
+- Xtream Codes login: add-provider form now offers M3U URL or Xtream
+  login (server + username + password via player_api.php; credentials
+  stay on-device only, go only to the provider's own server).
+  Live/VOD/series come through as Live/Movie/Series items with
+  category groups; series open an episode list; stream URLs use the
+  standard /live/, /movie/, /series/ formats.
+- Player: full action bar (shows with the controller) — Record,
+  Tracks, Sleep timer, Go live. Audio/subtitle track picker from the
+  player's actual tracks. Dolby AC-3/E-AC-3 passes through untouched
+  when the device and output support it (never forced to stereo); the
+  info line names the active format (e.g. "Dolby Digital 5.1") so it
+  is visible when 5.1 is actually playing. Stereo streams stay stereo.
+- Timeshift + record (direct TS streams only): while watching, the
+  stream buffers to a local file and plays through a loopback proxy,
+  so pause freezes, seek rewinds within the buffer, and Record keeps
+  the file as a recording on exit (Recordings screen: play/delete).
+  Rewind only reaches back to when the channel session started; the
+  buffer caps at 2 GB / low-storage stop. HLS (.m3u8) and DASH play
+  directly without timeshift (Record/Go live hide for them).
+- EPG: NOT in this build — no guide data is shown, and none is faked.
+  EPG (xmltv) integration is the next slice after this one is proven.
+- Files: new data/PlaylistLoader.kt (streaming + cache),
+  data/XtreamClient.kt, data/ChannelRepository.kt, data/HttpUtil.kt,
+  parser/M3uLineParser.kt, timeshift/TimeshiftSession.kt,
+  timeshift/TimeshiftProxy.kt, timeshift/RecordingsStore.kt,
+  ui/ChannelMenu.kt, ui/ChannelRowAdapter.kt, ui/SearchActivity.kt,
+  ui/SeriesEpisodesActivity.kt, ui/RecordingsActivity.kt,
+  res/layout/activity_home.xml, item_sidebar.xml, item_channel_row.xml,
+  item_group_header.xml, activity_search.xml, activity_simple_list.xml,
+  res/drawable/item_focus_bg.xml; rewritten ui/MainFragment.kt (plain
+  Fragment, no Leanback browse), ui/PlaybackActivity.kt,
+  ui/AddProviderActivity.kt, data/ProviderStore.kt (M3U + Xtream
+  types, legacy two-part lines still parse), model/Channel.kt (kind +
+  seriesId); build.gradle adds recyclerview 1.3.2; manifest adds the
+  three new activities. Old CardPresenter.kt stays, unreferenced
+  (snapshot pushes cannot delete files).
+- Tests (new, pure): M3uLineParserTest, XtreamUrlsTest,
+  ProviderLineTest. Existing tests untouched and still compatible
+  (Channel's new fields default; M3uParser delegates to the line parser).
+- HONEST LIMITS (not device-tested): nothing here has run on a box.
+  The timeshift proxy, the sidebar focus flow, and the Xtream login
+  are code-reviewed only until the Onn-box test. CI result pending at
+  push time — see ci-status.txt on main after the run.

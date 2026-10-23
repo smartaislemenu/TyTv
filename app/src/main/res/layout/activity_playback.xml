@@ -21,4 +21,50 @@
         android:padding="12dp"
         android:textColor="#FFFFFF"
         android:textSize="20sp" />
+
+    <!-- Action bar, top-right. Shows and hides with the player
+         controller, so it never sits on the video while watching. -->
+    <LinearLayout
+        android:id="@+id/action_bar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_margin="24dp"
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/info_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:background="#80000000"
+            android:padding="12dp"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp" />
+
+        <Button
+            android:id="@+id/record_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/record" />
+
+        <Button
+            android:id="@+id/tracks_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/tracks" />
+
+        <Button
+            android:id="@+id/sleep_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/sleep_timer" />
+
+        <Button
+            android:id="@+id/golive_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/go_live" />
+    </LinearLayout>
 </FrameLayout>

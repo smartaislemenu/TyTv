@@ -2,87 +2,260 @@ package com.tytv.app.ui
 
 import android.app.AlertDialog
 import android.content.Intent
-import android.graphics.Color
 import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
 import android.widget.Toast
-import androidx.leanback.app.BrowseSupportFragment
-import androidx.leanback.widget.ArrayObjectAdapter
-import androidx.leanback.widget.HeaderItem
-import androidx.leanback.widget.ListRow
-import androidx.leanback.widget.ListRowPresenter
-import androidx.leanback.widget.OnItemViewClickedListener
+import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.tytv.app.R
 import com.tytv.app.data.ChannelPrefs
-import com.tytv.app.data.ProviderStore
+import com.tytv.app.data.ChannelRepository
 import com.tytv.app.model.Channel
-import com.tytv.app.parser.M3uParser
-import com.tytv.app.settings.BufferSettings
+import com.tytv.app.model.ChannelKind
 import com.tytv.app.update.UpdateCheckResult
 import com.tytv.app.update.UpdateChecker
 import com.tytv.app.update.UpdateDialog
 import com.tytv.app.update.UpdateFlow
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.net.HttpURLConnection
-import java.net.URL
 
 /**
- * Leanback browse screen: a Setup row, a Favorites row, then one row per
- * provider group, in the provider's original group order. Channels from
- * every provider are merged; duplicates are kept and tagged with their
- * provider name.
+ * Apollo-style home screen: a category sidebar on the left and a
+ * fast-scrolling windowed list on the right. The list is a
+ * RecyclerView, so only visible rows are bound — thousands of
+ * channels scroll smoothly, unlike the old Leanback rows that built
+ * one card per channel for the whole playlist.
  *
- * Long-press (remote select held down) on a channel card opens a menu:
- * Play, Add/Remove Favorite, Hide channel, Rename group. Hidden channels
- * appear in no row; they are brought back from Setup → Hidden channels.
- * A group's row header shows the provider's ORIGINAL group name first,
- * with the user's label alongside it — the original is never replaced.
+ * Sections: Live TV, Movies, Series, Sports, Favorites. Sidebar also
+ * holds Search, Recordings, Setup, and Refresh. Channels load from
+ * the on-device cache instantly and refresh in the background, so a
+ * relaunch never sits on an empty screen while a multi-MB playlist
+ * downloads again. Favorites, hidden channels, and group renames
+ * work exactly as before (same on-device storage).
  */
-class MainFragment : BrowseSupportFragment() {
+class MainFragment : Fragment() {
 
-    private val cardPresenter = CardPresenter().apply {
-        onChannelLongPress = { channel -> showChannelMenu(channel) }
+    private enum class Section(val title: String) {
+        LIVE("Live TV"),
+        MOVIES("Movies"),
+        SERIES("Series"),
+        SPORTS("Sports"),
+        FAVORITES("Favorites")
     }
 
-    /** (provider, original group) pairs from the last load, for the rename screen. */
-    private var lastGroups: List<Pair<String, String>> = emptyList()
+    private sealed class DisplayItem {
+        data class Header(val text: String) : DisplayItem()
+        data class Row(val channel: Channel) : DisplayItem()
+    }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        title = "TYTV"
-        headersState = HEADERS_ENABLED
-        isHeadersTransitionOnBackEnabled = true
-        brandColor = Color.parseColor("#111827")
-        adapter = ArrayObjectAdapter(ListRowPresenter())
-        onItemViewClickedListener = OnItemViewClickedListener { _, item, _, _ ->
-            when (item) {
-                is ActionCard -> when (item.action) {
-                    ActionCard.ADD_PROVIDER ->
-                        startActivity(Intent(requireContext(), AddProviderActivity::class.java))
-                    ActionCard.BUFFER_SETTINGS ->
-                        startActivity(Intent(requireContext(), BufferSettingsActivity::class.java))
-                    ActionCard.CHECK_UPDATES -> checkForUpdatesManually()
-                    ActionCard.HIDDEN_CHANNELS ->
-                        startActivity(Intent(requireContext(), ManageHiddenActivity::class.java))
-                    ActionCard.RENAME_GROUPS ->
-                        startActivity(RenameGroupsActivity.intent(requireContext(), lastGroups))
-                    ActionCard.FAVORITES_HELP ->
-                        Toast.makeText(
-                            requireContext(),
-                            R.string.favorites_help,
-                            Toast.LENGTH_LONG
-                        ).show()
-                }
-                is Channel -> startActivity(PlaybackActivity.intent(requireContext(), item))
-            }
+    private val sidebarTitles = listOf(
+        "Live TV", "Movies", "Series", "Sports", "Favorites",
+        "Search", "Recordings", "Setup", "Refresh"
+    )
+
+    private lateinit var sidebarList: RecyclerView
+    private lateinit var channelList: RecyclerView
+    private lateinit var sectionTitle: TextView
+    private lateinit var statusText: TextView
+    private lateinit var channelAdapter: ChannelAdapter
+
+    private var allChannels: List<Channel> = emptyList()
+    private var lastGroups: List<Pair<String, String>> = emptyList()
+    private var currentSection = Section.LIVE
+    private var lastRefreshMs = 0L
+    private var initialLoadDone = false
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        return inflater.inflate(R.layout.activity_home, container, false)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        sidebarList = view.findViewById(R.id.sidebar_list)
+        channelList = view.findViewById(R.id.channel_list)
+        sectionTitle = view.findViewById(R.id.section_title)
+        statusText = view.findViewById(R.id.status_text)
+
+        sidebarList.layoutManager = LinearLayoutManager(requireContext())
+        sidebarList.adapter = SidebarAdapter(sidebarTitles) { position ->
+            onSidebarSelected(position)
         }
+        channelList.layoutManager = LinearLayoutManager(requireContext())
+        channelAdapter = ChannelAdapter(
+            onClick = { channel -> ChannelMenu.play(requireContext(), channel) },
+            onLongPress = { channel ->
+                ChannelMenu.show(requireContext(), channel) { applySection() }
+            }
+        )
+        channelList.adapter = channelAdapter
+
+        sidebarList.post {
+            (sidebarList.layoutManager as LinearLayoutManager)
+                .findViewByPosition(0)?.requestFocus()
+        }
+        load(forceRefresh = false, silent = false)
     }
 
     override fun onResume() {
         super.onResume()
-        loadChannels()
+        // Re-apply so renames/favorites changed elsewhere show at once.
+        if (initialLoadDone) applySection()
+        val now = System.currentTimeMillis()
+        if (initialLoadDone && now - lastRefreshMs > 60_000) {
+            refreshInBackground()
+        }
+    }
+
+    private fun onSidebarSelected(position: Int) {
+        when (position) {
+            0 -> switchSection(Section.LIVE)
+            1 -> switchSection(Section.MOVIES)
+            2 -> switchSection(Section.SERIES)
+            3 -> switchSection(Section.SPORTS)
+            4 -> switchSection(Section.FAVORITES)
+            5 -> startActivity(Intent(requireContext(), SearchActivity::class.java))
+            6 -> startActivity(Intent(requireContext(), RecordingsActivity::class.java))
+            7 -> showSetupMenu()
+            8 -> load(forceRefresh = true, silent = false)
+        }
+    }
+
+    private fun switchSection(section: Section) {
+        currentSection = section
+        applySection()
+    }
+
+    private fun load(forceRefresh: Boolean, silent: Boolean) {
+        val context = requireContext()
+        if (!silent) {
+            statusText.visibility = View.VISIBLE
+            statusText.text = getString(R.string.home_loading)
+        }
+        lifecycleScope.launch {
+            val outcome = ChannelRepository.loadAll(context, forceRefresh)
+            allChannels = outcome.channels
+            lastGroups = allChannels.map { it.provider to it.group }.distinct()
+            lastRefreshMs = System.currentTimeMillis()
+            initialLoadDone = true
+            applySection()
+            if (outcome.channels.isEmpty()) {
+                statusText.visibility = View.VISIBLE
+                statusText.text = if (outcome.failures.isEmpty()) {
+                    getString(R.string.home_empty)
+                } else {
+                    getString(R.string.home_load_failed, outcome.failures.joinToString("\n"))
+                }
+            } else {
+                statusText.visibility = View.GONE
+                if (!silent) {
+                    for (failure in outcome.failures) {
+                        Toast.makeText(context, failure, Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+            // First load came from cache: refresh live in the background
+            // so the list is fresh without making launch wait on it.
+            if (!forceRefresh && outcome.fromCache) refreshInBackground()
+        }
+    }
+
+    private fun refreshInBackground() {
+        val context = requireContext()
+        lifecycleScope.launch {
+            val outcome = ChannelRepository.loadAll(context, true)
+            if (outcome.channels.isNotEmpty()) {
+                allChannels = outcome.channels
+                lastGroups = allChannels.map { it.provider to it.group }.distinct()
+                lastRefreshMs = System.currentTimeMillis()
+                applySection()
+            }
+        }
+    }
+
+    private fun applySection() {
+        val context = requireContext()
+        sectionTitle.text = currentSection.title
+        val visible = allChannels.filter { !ChannelPrefs.isHidden(context, it) }
+        val sectionChannels = when (currentSection) {
+            Section.LIVE -> visible.filter { it.kind == ChannelKind.LIVE }
+            Section.MOVIES -> visible.filter { it.kind == ChannelKind.MOVIE }
+            Section.SERIES -> visible.filter { it.kind == ChannelKind.SERIES }
+            Section.SPORTS -> visible.filter {
+                it.kind == ChannelKind.LIVE &&
+                    (it.group.contains("sport", ignoreCase = true) ||
+                        it.name.contains("sport", ignoreCase = true))
+            }
+            Section.FAVORITES -> {
+                val keys = ChannelPrefs.favoriteKeys(context)
+                visible.filter { keys.contains(it.provider to it.url) }
+            }
+        }
+        val items = mutableListOf<DisplayItem>()
+        if (currentSection == Section.FAVORITES) {
+            for (channel in sectionChannels) items += DisplayItem.Row(channel)
+        } else {
+            val providersPerGroup = sectionChannels.groupBy { it.group }
+                .mapValues { entry -> entry.value.map { it.provider }.distinct() }
+            for ((providerAndGroup, groupChannels) in
+                sectionChannels.groupBy { it.provider to it.group }) {
+                val (provider, group) = providerAndGroup
+                val display = ChannelPrefs.displayGroup(
+                    group,
+                    ChannelPrefs.getLabel(context, provider, group)
+                )
+                val header = if ((providersPerGroup[group]?.size ?: 0) > 1) {
+                    "$display • $provider"
+                } else {
+                    display
+                }
+                items += DisplayItem.Header(header)
+                for (channel in groupChannels) items += DisplayItem.Row(channel)
+            }
+        }
+        channelAdapter.submit(items)
+        if (sectionChannels.isEmpty() && allChannels.isNotEmpty()) {
+            statusText.visibility = View.VISIBLE
+            statusText.text = when (currentSection) {
+                Section.SPORTS -> getString(R.string.home_sports_empty)
+                Section.FAVORITES -> getString(R.string.favorites_empty_description)
+                else -> getString(R.string.home_section_empty)
+            }
+        } else if (allChannels.isNotEmpty()) {
+            statusText.visibility = View.GONE
+        }
+    }
+
+    private fun showSetupMenu() {
+        val context = requireContext()
+        val items = arrayOf(
+            getString(R.string.add_provider_title),
+            getString(R.string.buffer_title),
+            getString(R.string.check_updates_title),
+            getString(R.string.hidden_channels_title),
+            getString(R.string.rename_groups_title)
+        )
+        AlertDialog.Builder(context)
+            .setTitle(R.string.setup_title)
+            .setItems(items) { _, which ->
+                when (which) {
+                    0 -> startActivity(Intent(context, AddProviderActivity::class.java))
+                    1 -> startActivity(Intent(context, BufferSettingsActivity::class.java))
+                    2 -> checkForUpdatesManually()
+                    3 -> startActivity(Intent(context, ManageHiddenActivity::class.java))
+                    4 -> startActivity(
+                        RenameGroupsActivity.intent(context, lastGroups)
+                    )
+                }
+            }
+            .show()
     }
 
     /**
@@ -94,7 +267,6 @@ class MainFragment : BrowseSupportFragment() {
         lifecycleScope.launch {
             when (val result = UpdateChecker.check(requireContext())) {
                 is UpdateCheckResult.Available -> {
-                    // requireActivity() is a FragmentActivity (host is MainActivity).
                     UpdateDialog.show(activity, result.info) {
                         UpdateFlow.start(activity, result.info)
                     }
@@ -115,181 +287,82 @@ class MainFragment : BrowseSupportFragment() {
         }
     }
 
-    private fun loadChannels() {
-        lifecycleScope.launch {
-            val providers = ProviderStore.getProviders(requireContext())
-            val all = mutableListOf<Channel>()
-            var failures = 0
-            for (provider in providers) {
-                try {
-                    val text = withContext(Dispatchers.IO) { fetchUrl(provider.m3uUrl) }
-                    all += M3uParser.parse(text, provider.name)
-                } catch (e: Exception) {
-                    failures++
-                }
-            }
-            if (failures > 0) {
-                Toast.makeText(
-                    requireContext(),
-                    "$failures provider(s) failed to load",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-            buildRows(all)
+    private class SidebarAdapter(
+        private val titles: List<String>,
+        private val onSelected: (Int) -> Unit
+    ) : RecyclerView.Adapter<SidebarAdapter.Holder>() {
+
+        class Holder(view: View) : RecyclerView.ViewHolder(view) {
+            val title: TextView = view.findViewById(R.id.sidebar_title)
         }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
+            val view = LayoutInflater.from(parent.context)
+                .inflate(R.layout.item_sidebar, parent, false)
+            return Holder(view)
+        }
+
+        override fun onBindViewHolder(holder: Holder, position: Int) {
+            holder.title.text = titles[position]
+            holder.itemView.setOnClickListener { onSelected(position) }
+        }
+
+        override fun getItemCount(): Int = titles.size
     }
 
-    private fun buildRows(channels: List<Channel>) {
-        val context = requireContext()
-        lastGroups = channels.map { it.provider to it.group }.distinct()
-        val visible = channels.filter { !ChannelPrefs.isHidden(context, it) }
-        val favoriteKeys = ChannelPrefs.favoriteKeys(context)
+    private class ChannelAdapter(
+        private val onClick: (Channel) -> Unit,
+        private val onLongPress: (Channel) -> Unit
+    ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-        val newAdapter = ArrayObjectAdapter(ListRowPresenter())
-        var headerId = 0L
-        val setupAdapter = ArrayObjectAdapter(cardPresenter).apply {
-            add(ActionCard("Add provider", "Add an M3U playlist URL", ActionCard.ADD_PROVIDER))
-            add(
-                ActionCard(
-                    "Buffer size",
-                    "Current: ${BufferSettings.get(context).label}",
-                    ActionCard.BUFFER_SETTINGS
-                )
-            )
-            add(
-                ActionCard(
-                    getString(R.string.check_updates_title),
-                    getString(
-                        R.string.check_updates_version,
-                        UpdateChecker.installedVersionName(context) ?: "?"
-                    ),
-                    ActionCard.CHECK_UPDATES
-                )
-            )
-            add(
-                ActionCard(
-                    getString(R.string.hidden_channels_title),
-                    getString(R.string.hidden_channels_description),
-                    ActionCard.HIDDEN_CHANNELS
-                )
-            )
-            add(
-                ActionCard(
-                    getString(R.string.rename_groups_title),
-                    getString(R.string.rename_groups_description),
-                    ActionCard.RENAME_GROUPS
-                )
-            )
+        private var items: List<DisplayItem> = emptyList()
+
+        fun submit(newItems: List<DisplayItem>) {
+            items = newItems
+            notifyDataSetChanged()
         }
-        newAdapter.add(ListRow(HeaderItem(headerId++, "Setup"), setupAdapter))
 
-        // Favorites row, always present so it is easy to find. A favorited
-        // channel that is hidden stays hidden (hidden wins everywhere).
-        val favoritesAdapter = ArrayObjectAdapter(cardPresenter)
-        val favoriteChannels = visible.filter { favoriteKeys.contains(it.provider to it.url) }
-        if (favoriteChannels.isEmpty()) {
-            favoritesAdapter.add(
-                ActionCard(
-                    getString(R.string.favorites_empty_title),
-                    getString(R.string.favorites_empty_description),
-                    ActionCard.FAVORITES_HELP
-                )
-            )
-        } else {
-            for (channel in favoriteChannels) favoritesAdapter.add(channel)
+        class HeaderHolder(view: View) : RecyclerView.ViewHolder(view) {
+            val text: TextView = view.findViewById(R.id.group_header)
         }
-        newAdapter.add(
-            ListRow(
-                HeaderItem(headerId++, getString(R.string.favorites_title)),
-                favoritesAdapter
-            )
-        )
 
-        // One row per provider group, in first-appearance order. Grouping by
-        // (provider, group) keeps renames per-provider: two providers with
-        // the same group name get separate rows, and a shared group name
-        // shows its provider in the header so the rows stay tellable apart.
-        val providersPerGroup = visible.groupBy { it.group }
-            .mapValues { entry -> entry.value.map { it.provider }.distinct() }
-        for ((providerAndGroup, groupChannels) in visible.groupBy { it.provider to it.group }) {
-            val (provider, group) = providerAndGroup
-            val display = ChannelPrefs.displayGroup(
-                group,
-                ChannelPrefs.getLabel(context, provider, group)
-            )
-            val header = if ((providersPerGroup[group]?.size ?: 0) > 1) {
-                "$display • $provider"
+        class RowHolder(view: View) : RecyclerView.ViewHolder(view) {
+            val name: TextView = view.findViewById(R.id.channel_name)
+            val sub: TextView = view.findViewById(R.id.channel_sub)
+        }
+
+        override fun getItemViewType(position: Int): Int = when (items[position]) {
+            is DisplayItem.Header -> 0
+            is DisplayItem.Row -> 1
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+            val inflater = LayoutInflater.from(parent.context)
+            return if (viewType == 0) {
+                HeaderHolder(inflater.inflate(R.layout.item_group_header, parent, false))
             } else {
-                display
+                RowHolder(inflater.inflate(R.layout.item_channel_row, parent, false))
             }
-            val rowAdapter = ArrayObjectAdapter(cardPresenter)
-            for (channel in groupChannels) rowAdapter.add(channel)
-            newAdapter.add(ListRow(HeaderItem(headerId++, header), rowAdapter))
         }
-        adapter = newAdapter
-    }
 
-    /**
-     * Channel menu for a long-pressed card. A plain list dialog: D-pad
-     * up/down moves between items, select runs one, back dismisses it.
-     * Favorite/hide changes reload the rows so the Favorites row and the
-     * group rows update immediately.
-     */
-    private fun showChannelMenu(channel: Channel) {
-        val context = requireContext()
-        val isFavorite = ChannelPrefs.isFavorite(context, channel)
-        val items = arrayOf(
-            getString(R.string.channel_menu_play),
-            getString(
-                if (isFavorite) {
-                    R.string.channel_menu_remove_favorite
-                } else {
-                    R.string.channel_menu_add_favorite
+        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+            when (val item = items[position]) {
+                is DisplayItem.Header -> {
+                    (holder as HeaderHolder).text.text = item.text
                 }
-            ),
-            getString(R.string.channel_menu_hide),
-            getString(R.string.channel_menu_rename_group)
-        )
-        AlertDialog.Builder(context)
-            .setTitle(channel.name)
-            .setItems(items) { _, which ->
-                when (which) {
-                    0 -> startActivity(PlaybackActivity.intent(context, channel))
-                    1 -> {
-                        ChannelPrefs.setFavorite(context, channel, !isFavorite)
-                        Toast.makeText(
-                            context,
-                            if (isFavorite) {
-                                R.string.channel_unfavorited
-                            } else {
-                                R.string.channel_favorited
-                            },
-                            Toast.LENGTH_SHORT
-                        ).show()
-                        loadChannels()
+                is DisplayItem.Row -> {
+                    val row = holder as RowHolder
+                    row.name.text = item.channel.name
+                    row.sub.text = "${item.channel.group} • ${item.channel.provider}"
+                    holder.itemView.setOnClickListener { onClick(item.channel) }
+                    holder.itemView.setOnLongClickListener {
+                        onLongPress(item.channel)
+                        true
                     }
-                    2 -> {
-                        ChannelPrefs.hide(context, channel)
-                        Toast.makeText(
-                            context,
-                            R.string.channel_hidden,
-                            Toast.LENGTH_LONG
-                        ).show()
-                        loadChannels()
-                    }
-                    3 -> startActivity(
-                        RenameGroupActivity.intent(context, channel.provider, channel.group)
-                    )
                 }
             }
-            .show()
-    }
+        }
 
-    private fun fetchUrl(urlString: String): String {
-        val connection = URL(urlString).openConnection() as HttpURLConnection
-        connection.connectTimeout = 15000
-        connection.readTimeout = 30000
-        connection.setRequestProperty("User-Agent", "TYTV/0.1")
-        connection.inputStream.bufferedReader().use { return it.readText() }
+        override fun getItemCount(): Int = items.size
     }
 }

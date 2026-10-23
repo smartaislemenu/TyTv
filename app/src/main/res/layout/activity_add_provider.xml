@@ -23,15 +23,74 @@
         android:textColor="#FFFFFF"
         android:textColorHint="#9CA3AF" />
 
-    <EditText
-        android:id="@+id/provider_url_input"
+    <Spinner
+        android:id="@+id/provider_type_spinner"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:hint="@string/provider_url_hint"
-        android:inputType="textUri"
-        android:textColor="#FFFFFF"
-        android:textColorHint="#9CA3AF" />
+        android:layout_marginTop="24dp" />
+
+    <LinearLayout
+        android:id="@+id/m3u_group"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <EditText
+            android:id="@+id/provider_url_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:hint="@string/provider_url_hint"
+            android:inputType="textUri"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#9CA3AF" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/xtream_group"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <EditText
+            android:id="@+id/xtream_server_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:hint="@string/xtream_server_hint"
+            android:inputType="textUri"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#9CA3AF" />
+
+        <EditText
+            android:id="@+id/xtream_user_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:hint="@string/xtream_user_hint"
+            android:inputType="text"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#9CA3AF" />
+
+        <EditText
+            android:id="@+id/xtream_pass_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:hint="@string/xtream_pass_hint"
+            android:inputType="textPassword"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#9CA3AF" />
+
+        <TextView
+            android:id="@+id/xtream_note"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:textColor="#9CA3AF"
+            android:textSize="16sp" />
+    </LinearLayout>
 
     <Button
         android:id="@+id/save_button"

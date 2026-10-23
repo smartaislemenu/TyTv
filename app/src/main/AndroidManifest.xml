@@ -64,6 +64,21 @@
             android:exported="false"
             android:theme="@style/Theme.Leanback" />
 
+        <activity
+            android:name=".ui.SearchActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Leanback" />
+
+        <activity
+            android:name=".ui.SeriesEpisodesActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Leanback" />
+
+        <activity
+            android:name=".ui.RecordingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Leanback" />
+
         <!-- Lets the system installer read a downloaded update APK from
              app-private storage. Authority is "<package>.fileprovider". -->
         <provider
