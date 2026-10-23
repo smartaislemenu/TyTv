@@ -1,0 +1,6 @@
+outcome=success
+run_id=39880012616
+run_number=1
+sha=17813d5fd05ddc5f78ad14f24618d494e63ffeae
+apk_size=7507890
+apk_sha256=ca60c312b95614e311e7d200fe5312307d16edcd6eb18ed0d0636c3f9cb89059
