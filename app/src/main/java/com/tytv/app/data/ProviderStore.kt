@@ -19,7 +19,9 @@ data class Provider(
     val m3uUrl: String = "",
     val server: String = "",
     val username: String = "",
-    val password: String = ""
+    val password: String = "",
+    /** Optional XMLTV guide address for this provider (blank = none set). */
+    val epgUrl: String = ""
 )
 
 object ProviderStore {
@@ -27,16 +29,18 @@ object ProviderStore {
     private const val KEY_PROVIDERS = "providers"
 
     /**
-     * One provider per line. New format: `name|m3u|url` or
-     * `name|xtream|server|username|password`. The original format was
-     * `name|url` (two parts); it still parses as an M3U provider so
-     * providers saved by older builds keep working. Pure, so unit
-     * tests can pin the format.
+     * One provider per line. Current format: `name|m3u|url|epgUrl` or
+     * `name|xtream|server|username|password|epgUrl` (the EPG part may
+     * be empty). Older formats still parse so providers saved by
+     * earlier builds keep working: `name|url` (two parts),
+     * `name|m3u|url`, and `name|xtream|server|username|password`.
+     * Pure, so unit tests can pin the format.
      */
     fun serialize(provider: Provider): String = when (provider.type) {
-        ProviderType.M3U -> "${provider.name}|m3u|${provider.m3uUrl}"
+        ProviderType.M3U -> "${provider.name}|m3u|${provider.m3uUrl}|${provider.epgUrl}"
         ProviderType.XTREAM ->
-            "${provider.name}|xtream|${provider.server}|${provider.username}|${provider.password}"
+            "${provider.name}|xtream|${provider.server}|${provider.username}|" +
+                "${provider.password}|${provider.epgUrl}"
     }
 
     /** Parses one stored line, or null when it is not a provider line. Pure. */
@@ -47,6 +51,11 @@ object ProviderStore {
                 Provider(name = parts[0], type = ProviderType.M3U, m3uUrl = parts[1])
             parts.size == 3 && parts[1] == "m3u" ->
                 Provider(name = parts[0], type = ProviderType.M3U, m3uUrl = parts[2])
+            parts.size == 4 && parts[1] == "m3u" ->
+                Provider(
+                    name = parts[0], type = ProviderType.M3U,
+                    m3uUrl = parts[2], epgUrl = parts[3]
+                )
             parts.size == 5 && parts[1] == "xtream" ->
                 Provider(
                     name = parts[0],
@@ -54,6 +63,15 @@ object ProviderStore {
                     server = parts[2],
                     username = parts[3],
                     password = parts[4]
+                )
+            parts.size == 6 && parts[1] == "xtream" ->
+                Provider(
+                    name = parts[0],
+                    type = ProviderType.XTREAM,
+                    server = parts[2],
+                    username = parts[3],
+                    password = parts[4],
+                    epgUrl = parts[5]
                 )
             else -> null
         }
@@ -75,8 +93,13 @@ object ProviderStore {
             .edit().putString(KEY_PROVIDERS, raw).apply()
     }
 
-    fun addProvider(context: Context, name: String, m3uUrl: String) {
-        saveAll(context, getProviders(context) + Provider(name, ProviderType.M3U, m3uUrl = m3uUrl))
+    fun addProvider(context: Context, name: String, m3uUrl: String, epgUrl: String = "") {
+        saveAll(
+            context,
+            getProviders(context) + Provider(
+                name, ProviderType.M3U, m3uUrl = m3uUrl, epgUrl = epgUrl
+            )
+        )
     }
 
     fun addXtreamProvider(
@@ -84,7 +107,8 @@ object ProviderStore {
         name: String,
         server: String,
         username: String,
-        password: String
+        password: String,
+        epgUrl: String = ""
     ) {
         saveAll(
             context,
@@ -93,7 +117,8 @@ object ProviderStore {
                 ProviderType.XTREAM,
                 server = server,
                 username = username,
-                password = password
+                password = password,
+                epgUrl = epgUrl
             )
         )
     }

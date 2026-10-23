@@ -79,6 +79,11 @@
             android:exported="false"
             android:theme="@style/Theme.Leanback" />
 
+        <activity
+            android:name=".ui.GuideActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Leanback" />
+
         <!-- Lets the system installer read a downloaded update APK from
              app-private storage. Authority is "<package>.fileprovider". -->
         <provider

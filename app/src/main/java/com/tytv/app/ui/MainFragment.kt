@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.tytv.app.R
 import com.tytv.app.data.ChannelPrefs
 import com.tytv.app.data.ChannelRepository
+import com.tytv.app.epg.EpgStore
 import com.tytv.app.model.Channel
 import com.tytv.app.model.ChannelKind
 import com.tytv.app.update.UpdateCheckResult
@@ -54,7 +55,7 @@ class MainFragment : Fragment() {
 
     private val sidebarTitles = listOf(
         "Live TV", "Movies", "Series", "Sports", "Favorites",
-        "Search", "Recordings", "Setup", "Refresh"
+        "Guide", "Search", "Recordings", "Setup", "Refresh"
     )
 
     private lateinit var sidebarList: RecyclerView
@@ -121,10 +122,11 @@ class MainFragment : Fragment() {
             2 -> switchSection(Section.SERIES)
             3 -> switchSection(Section.SPORTS)
             4 -> switchSection(Section.FAVORITES)
-            5 -> startActivity(Intent(requireContext(), SearchActivity::class.java))
-            6 -> startActivity(Intent(requireContext(), RecordingsActivity::class.java))
-            7 -> showSetupMenu()
-            8 -> load(forceRefresh = true, silent = false)
+            5 -> startActivity(Intent(requireContext(), GuideActivity::class.java))
+            6 -> startActivity(Intent(requireContext(), SearchActivity::class.java))
+            7 -> startActivity(Intent(requireContext(), RecordingsActivity::class.java))
+            8 -> showSetupMenu()
+            9 -> load(forceRefresh = true, silent = false)
         }
     }
 
@@ -240,7 +242,8 @@ class MainFragment : Fragment() {
             getString(R.string.buffer_title),
             getString(R.string.check_updates_title),
             getString(R.string.hidden_channels_title),
-            getString(R.string.rename_groups_title)
+            getString(R.string.rename_groups_title),
+            getString(R.string.epg_address_title)
         )
         AlertDialog.Builder(context)
             .setTitle(R.string.setup_title)
@@ -253,8 +256,42 @@ class MainFragment : Fragment() {
                     4 -> startActivity(
                         RenameGroupsActivity.intent(context, lastGroups)
                     )
+                    5 -> showEpgAddressDialog()
                 }
             }
+            .show()
+    }
+
+    /**
+     * Global guide address: the fallback XMLTV address used for any
+     * provider without its own EPG address (Xtream logins use their
+     * own xmltv.php first). Blank means no global guide.
+     */
+    private fun showEpgAddressDialog() {
+        val context = requireContext()
+        val input = android.widget.EditText(context).apply {
+            setText(EpgStore.getGlobalUrl(context))
+            hint = getString(R.string.epg_address_hint)
+            inputType = android.text.InputType.TYPE_TEXT_VARIATION_URI
+        }
+        AlertDialog.Builder(context)
+            .setTitle(R.string.epg_address_title)
+            .setMessage(R.string.epg_address_note)
+            .setView(input)
+            .setPositiveButton(R.string.save_provider) { _, _ ->
+                val url = input.text.toString().trim()
+                EpgStore.setGlobalUrl(context, url)
+                Toast.makeText(
+                    context,
+                    if (url.isEmpty()) {
+                        R.string.epg_address_cleared
+                    } else {
+                        R.string.epg_address_saved
+                    },
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            .setNegativeButton(R.string.recording_cancel, null)
             .show()
     }
 

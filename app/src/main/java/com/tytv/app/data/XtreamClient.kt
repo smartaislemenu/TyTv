@@ -87,7 +87,8 @@ object XtreamClient {
                         group = liveCategories[item.optString("category_id")] ?: "Live TV",
                         logo = item.optString("stream_icon").ifEmpty { null },
                         provider = providerName,
-                        kind = ChannelKind.LIVE
+                        kind = ChannelKind.LIVE,
+                        tvgId = item.optString("epg_channel_id").ifEmpty { null }
                     )
                 }
 
@@ -113,7 +114,8 @@ object XtreamClient {
                 val series = fetchArray(server, user, pass, "get_series")
                 for (i in 0 until series.length()) {
                     val item = series.optJSONObject(i) ?: continue
-                    val id = item.optString("series_id").ifEmpty { continue }
+                    val id = item.optString("series_id")
+                    if (id.isEmpty()) continue
                     channels += Channel(
                         name = item.optString("name").ifEmpty { "Series $id" },
                         url = "xtream:series:$id",

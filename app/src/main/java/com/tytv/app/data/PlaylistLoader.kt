@@ -68,7 +68,8 @@ object PlaylistLoader {
  * background, so a relaunch never sits on an empty screen while a
  * multi-MB playlist downloads again.
  *
- * Lines are tab-separated `name\turl\tgroup\tlogo\tkind\tseriesId`
+ * Lines are tab-separated
+ * `name\turl\tgroup\tlogo\tkind\tseriesId\ttvgId`
  * with tabs and newlines scrubbed from text fields on write.
  */
 object PlaylistCache {
@@ -98,7 +99,8 @@ object PlaylistCache {
                             clean(channel.group),
                             clean(channel.logo),
                             channel.kind.name,
-                            clean(channel.seriesId)
+                            clean(channel.seriesId),
+                            clean(channel.tvgId)
                         ).joinToString("\t")
                     )
                     out.newLine()
@@ -131,7 +133,8 @@ object PlaylistCache {
                         logo = parts[3].ifEmpty { null },
                         provider = providerName,
                         kind = kind,
-                        seriesId = parts.getOrNull(5)?.ifEmpty { null }
+                        seriesId = parts.getOrNull(5)?.ifEmpty { null },
+                        tvgId = parts.getOrNull(6)?.ifEmpty { null }
                     )
                 }
             }

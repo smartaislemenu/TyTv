@@ -248,3 +248,52 @@
   The timeshift proxy, the sidebar focus flow, and the Xtream login
   are code-reviewed only until the Onn-box test. CI result pending at
   push time — see ci-status.txt on main after the run.
+
+## EPG slice — Oct 23 (Tyler correction: EPG must be IN the test build, not a later slice)
+- Tyler: "add a spot where I can add the address for an epg", "has to
+  have a guide", "with beautiful UI", "everything packed into it" for
+  one test, "do it all at once". So EPG rides the next commit after
+  build #3's CI result lands, and the delivered test build contains
+  build #3 + EPG together — one build, one test.
+- Address spots (two, both optional): an EPG address field on the
+  provider-add form (per provider), and a global EPG address in Setup
+  (fallback). Resolution order: provider's own address, then the
+  provider's own xmltv.php for Xtream logins, then the global address.
+  No address anywhere means no guide for that provider — never guessed.
+- Guide screen (GuideActivity, sidebar "Guide"): channels on the left
+  (each row shows its current programme, or "No guide data"), that
+  channel's programmes on the right with day headers (Today / Tomorrow /
+  date), the on-air programme highlighted with a gold ON NOW badge.
+  Tapping the on-air programme plays the channel; tapping a future
+  programme shows its details. D-pad left/right switches panes.
+  The player info line also shows Now/Next when a guide is loaded.
+- Matching: XMLTV channel id against the channel's tvg-id (M3U tvg-id
+  attribute, or Xtream epg_channel_id), falling back to a normalized
+  display-name match. Channels with no match show "No guide data" —
+  listings are never invented.
+- Plumbing: streaming XMLTV parse (XmlPullParser, never whole-file in
+  memory), raw-XML cache per provider, parsed guides merged into an
+  in-memory index (fresh fetch replaces a provider's stale index).
+  EpgParser / EpgMatcher (pure, unit-tested) / EpgStore / EpgLoader.
+  Provider lines gain an EPG part (m3u 4-part, xtream 6-part; all older
+  formats still parse). Channel gains tvgId; cache lines gain tvgId.
+- Files: epg/EpgData.kt, EpgParser.kt, EpgMatcher.kt, EpgStore.kt,
+  EpgLoader.kt, ui/GuideActivity.kt, res/layout/activity_guide.xml,
+  item_programme_row.xml; edits to Channel, M3uLineParser (tvg-id),
+  ProviderStore, PlaylistCache, XtreamClient (epg_channel_id),
+  AddProviderActivity + layout, MainFragment (Guide sidebar item +
+  Setup EPG-address dialog), PlaybackActivity (now/next),
+  AndroidManifest (GuideActivity), strings, test EpgMatcherTest.
+- HONEST LIMITS: guide quality is only as good as the address the
+  user enters and that provider's data. Nothing here has run on a box
+  either — same code-review-only caveat as build #3.
+- CI FAILURE + FIX (Oct 23, run 3, build #3 commit): compile failed
+  with exactly two errors — (1) XtreamClient series loop used
+  `ifEmpty { continue }`, and `continue` inside an inline lambda is
+  an experimental feature; fixed with a plain `if (id.isEmpty())
+  continue`; (2) PlaybackActivity called
+  `clearOverrideForType`, which does not exist on Media3's
+  TrackSelectionParameters.Builder — the real method is
+  `clearOverridesOfType`. Both one-line fixes ride the same commit as
+  the EPG slice, so the next CI run builds build #3 + fixes + EPG
+  together as the single test build.

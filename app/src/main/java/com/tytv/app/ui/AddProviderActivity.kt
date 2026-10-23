@@ -36,6 +36,7 @@ class AddProviderActivity : FragmentActivity() {
         val serverInput = findViewById<EditText>(R.id.xtream_server_input)
         val userInput = findViewById<EditText>(R.id.xtream_user_input)
         val passInput = findViewById<EditText>(R.id.xtream_pass_input)
+        val epgInput = findViewById<EditText>(R.id.epg_url_input)
         findViewById<TextView>(R.id.xtream_note).text =
             getString(R.string.xtream_note)
 
@@ -72,6 +73,14 @@ class AddProviderActivity : FragmentActivity() {
                 Toast.makeText(this, R.string.provider_name_invalid, Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
+            // Optional guide address for this provider. Blank means:
+            // Xtream logins use their own xmltv.php, others fall back
+            // to the global address in Setup (or no guide at all).
+            val epgUrl = epgInput.text.toString().trim()
+            if (epgUrl.contains('|')) {
+                Toast.makeText(this, R.string.epg_url_invalid, Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
             if (isXtream) {
                 val server = serverInput.text.toString().trim()
                 val user = userInput.text.toString().trim()
@@ -82,14 +91,14 @@ class AddProviderActivity : FragmentActivity() {
                     Toast.makeText(this, R.string.xtream_fields_invalid, Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
-                ProviderStore.addXtreamProvider(this, name, server, user, pass)
+                ProviderStore.addXtreamProvider(this, name, server, user, pass, epgUrl)
             } else {
                 val url = urlInput.text.toString().trim()
                 if (url.isEmpty() || url.contains('|')) {
                     Toast.makeText(this, R.string.provider_url_invalid, Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
-                ProviderStore.addProvider(this, name, url)
+                ProviderStore.addProvider(this, name, url, epgUrl)
             }
             Toast.makeText(this, R.string.provider_saved, Toast.LENGTH_SHORT).show()
             finish()

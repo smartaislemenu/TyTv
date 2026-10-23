@@ -18,6 +18,7 @@ class M3uLineParser(private val providerName: String) {
     private var pendingName: String? = null
     private var pendingGroup = "Other"
     private var pendingLogo: String? = null
+    private var pendingTvgId: String? = null
     private var hasPending = false
 
     val channels = mutableListOf<Channel>()
@@ -30,6 +31,7 @@ class M3uLineParser(private val providerName: String) {
             line.startsWith("#EXTINF:") -> {
                 pendingGroup = extractAttr(line, "group-title") ?: "Other"
                 pendingLogo = extractAttr(line, "tvg-logo")
+                pendingTvgId = extractAttr(line, "tvg-id")
                 val afterComma = line.substringAfter(",", "")
                 pendingName = afterComma.trim().ifEmpty { extractAttr(line, "tvg-name") }
                 hasPending = true
@@ -42,12 +44,14 @@ class M3uLineParser(private val providerName: String) {
                         url = line,
                         group = pendingGroup,
                         logo = pendingLogo,
-                        provider = providerName
+                        provider = providerName,
+                        tvgId = pendingTvgId
                     )
                 }
                 pendingName = null
                 pendingGroup = "Other"
                 pendingLogo = null
+                pendingTvgId = null
                 hasPending = false
             }
         }

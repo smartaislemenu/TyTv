@@ -23,6 +23,8 @@ import androidx.media3.common.Tracks
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.tytv.app.R
+import com.tytv.app.epg.EpgMatcher
+import com.tytv.app.epg.EpgStore
 import com.tytv.app.model.Channel
 import com.tytv.app.settings.BufferSettings
 import com.tytv.app.timeshift.RecordingsStore
@@ -65,6 +67,8 @@ class PlaybackActivity : FragmentActivity() {
 
     private var channelName = ""
     private var streamUrl = ""
+    private var channelTvgId: String? = null
+    private var channelProvider = ""
     private var timeshiftEnabled = false
     private var timeshiftSession: TimeshiftSession? = null
     private var timeshiftProxy: TimeshiftProxy? = null
@@ -81,12 +85,16 @@ class PlaybackActivity : FragmentActivity() {
         private const val EXTRA_URL = "extra_url"
         private const val EXTRA_NAME = "extra_name"
         private const val EXTRA_LOCAL = "extra_local"
+        private const val EXTRA_TVG_ID = "extra_tvg_id"
+        private const val EXTRA_PROVIDER = "extra_provider"
 
         fun intent(context: Context, channel: Channel): Intent {
             return Intent(context, PlaybackActivity::class.java).apply {
                 putExtra(EXTRA_URL, channel.url)
                 putExtra(EXTRA_NAME, channel.name)
                 putExtra(EXTRA_LOCAL, false)
+                putExtra(EXTRA_TVG_ID, channel.tvgId)
+                putExtra(EXTRA_PROVIDER, channel.provider)
             }
         }
 
@@ -111,6 +119,8 @@ class PlaybackActivity : FragmentActivity() {
         channelNameView.text = intent.getStringExtra(EXTRA_NAME) ?: ""
         channelName = intent.getStringExtra(EXTRA_NAME) ?: ""
         streamUrl = intent.getStringExtra(EXTRA_URL) ?: ""
+        channelTvgId = intent.getStringExtra(EXTRA_TVG_ID)
+        channelProvider = intent.getStringExtra(EXTRA_PROVIDER) ?: ""
         playerView.setControllerVisibilityListener(
             PlayerView.ControllerVisibilityListener { visibility ->
                 actionBar.visibility = visibility
@@ -265,7 +275,31 @@ class PlaybackActivity : FragmentActivity() {
         } else {
             null
         }
-        infoText.text = listOfNotNull(channelName, audioDesc, timeshiftNote)
+        // Now/next from whatever guide is already loaded in memory.
+        // Never blocks playback on a guide fetch.
+        var nowNext: String? = null
+        try {
+            val probe = Channel(
+                name = channelName,
+                url = streamUrl,
+                group = "",
+                logo = null,
+                provider = channelProvider,
+                tvgId = channelTvgId
+            )
+            val programmes = EpgStore.findFor(probe)
+            if (!programmes.isNullOrEmpty()) {
+                val now = System.currentTimeMillis()
+                val current = EpgMatcher.currentAt(programmes, now)
+                val next = EpgMatcher.nextAfter(programmes, now)
+                val parts = mutableListOf<String>()
+                if (current != null) parts += getString(R.string.info_now, current.title)
+                if (next != null) parts += getString(R.string.info_next, next.title)
+                if (parts.isNotEmpty()) nowNext = parts.joinToString(" • ")
+            }
+        } catch (e: Exception) {
+        }
+        infoText.text = listOfNotNull(channelName, audioDesc, timeshiftNote, nowNext)
             .joinToString(" • ")
     }
 
@@ -335,7 +369,7 @@ class PlaybackActivity : FragmentActivity() {
                 val picked = options[which]
                 val params = exoPlayer.trackSelectionParameters.buildUpon()
                 if (picked.group == null) {
-                    params.clearOverrideForType(C.TRACK_TYPE_AUDIO)
+                    params.clearOverridesOfType(C.TRACK_TYPE_AUDIO)
                 } else {
                     params.setOverrideForType(
                         TrackSelectionOverride(picked.group, listOf(picked.index))

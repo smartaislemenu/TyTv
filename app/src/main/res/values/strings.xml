@@ -105,4 +105,23 @@
     <string name="sleep_timer_set">Sleep timer set: %1$d minutes.</string>
     <string name="sleep_timer_fired">Sleep timer — playback paused.</string>
     <string name="go_live">Go live</string>
+    <string name="guide_title">Guide</string>
+    <string name="guide_loading">Loading guide…</string>
+    <string name="guide_on_now">ON NOW</string>
+    <string name="guide_today">Today</string>
+    <string name="guide_tomorrow">Tomorrow</string>
+    <string name="guide_now_playing">Now: %1$s</string>
+    <string name="guide_no_data_short">No guide data</string>
+    <string name="guide_no_data">No guide data for %1$s. Add an EPG address for its provider, or a global one in Setup.</string>
+    <string name="guide_details">%1$s\n\n%2$s</string>
+    <string name="guide_no_description">No description for this programme.</string>
+    <string name="epg_address_title">EPG address (global)</string>
+    <string name="epg_address_hint">XMLTV guide address (http://…)</string>
+    <string name="epg_address_note">Used for any provider without its own EPG address. Xtream logins use their own xmltv.php first. Leave blank for no global guide.</string>
+    <string name="epg_address_saved">Global EPG address saved.</string>
+    <string name="epg_address_cleared">Global EPG address cleared.</string>
+    <string name="epg_url_hint">EPG address for this provider (optional)</string>
+    <string name="epg_url_invalid">The EPG address must not contain |.</string>
+    <string name="info_now">Now: %1$s</string>
+    <string name="info_next">Next: %1$s</string>
 </resources>

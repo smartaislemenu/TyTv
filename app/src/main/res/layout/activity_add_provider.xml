@@ -92,6 +92,16 @@
             android:textSize="16sp" />
     </LinearLayout>
 
+    <EditText
+        android:id="@+id/epg_url_input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:hint="@string/epg_url_hint"
+        android:inputType="textUri"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#9CA3AF" />
+
     <Button
         android:id="@+id/save_button"
         android:layout_width="wrap_content"
