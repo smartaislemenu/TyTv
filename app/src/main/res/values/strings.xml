@@ -205,4 +205,5 @@
     <string name="scores_off">The scores zone is off. Turn it on in Settings → Scores zone.</string>
     <string name="guide_no_address">No guide address set for %1$s. Add its EPG address on the provider, or a global one in Setup.</string>
     <string name="info_next">Next: %1$s</string>
+    <string name="category_all">All</string>
 </resources>

@@ -2,6 +2,7 @@ package com.tytv.app.ui
 
 import android.content.Intent
 import android.os.Bundle
+import android.graphics.Typeface
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -88,6 +89,15 @@ class MainFragment : Fragment() {
     private lateinit var statusText: TextView
     private lateinit var channelAdapter: ChannelAdapter
 
+    // Live TV category wheel: a horizontal, remote-friendly
+    // selector above the channel list. Labels[0] is All; the rest
+    // are the playlist's group names in first-appearance order.
+    // selectedGroup null means All.
+    private lateinit var wheelList: RecyclerView
+    private lateinit var wheelAdapter: WheelAdapter
+    private var wheelLabels: List<String> = emptyList()
+    private var selectedGroup: String? = null
+
     private var allChannels: List<Channel> = emptyList()
     private var lastGroups: List<Pair<String, String>> = emptyList()
     private var liveScores: List<ScoresApi.Game> = emptyList()
@@ -122,6 +132,16 @@ class MainFragment : Fragment() {
         )
         channelList.adapter = channelAdapter
 
+        wheelList = view.findViewById(R.id.category_wheel)
+        wheelList.layoutManager =
+            LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+        wheelAdapter = WheelAdapter(
+            labels = { wheelLabels },
+            selected = { selectedGroup },
+            onFocusItem = { group -> selectWheelGroup(group) }
+        )
+        wheelList.adapter = wheelAdapter
+
         // The section arrives from the home tile; the Refresh tile
         // asks for a forced reload instead of the cached load.
         val initialSection = try {
@@ -131,9 +151,15 @@ class MainFragment : Fragment() {
         }
         val startForceRefresh = arguments?.getBoolean(ARG_FORCE_REFRESH) ?: false
         switchSection(initialSection)
-        channelList.post {
-            (channelList.layoutManager as LinearLayoutManager)
-                .findViewByPosition(0)?.requestFocus()
+        // Live TV starts on the wheel (so left/right switches
+        // categories at once); other sections start on the list.
+        // The wheel itself is empty until channels land, and
+        // applySection focuses it then when nothing else has focus.
+        if (initialSection != Section.LIVE) {
+            channelList.post {
+                (channelList.layoutManager as LinearLayoutManager)
+                    .findViewByPosition(0)?.requestFocus()
+            }
         }
         load(forceRefresh = startForceRefresh, silent = false)
     }
@@ -264,12 +290,52 @@ class MainFragment : Fragment() {
         }
     }
 
+    private fun wheelPositionOf(group: String?): Int {
+        if (group == null) return 0
+        val idx = wheelLabels.indexOf(group)
+        return if (idx >= 0) idx else 0
+    }
+
+    private fun selectWheelGroup(group: String?) {
+        if (group == selectedGroup) return
+        val oldPos = wheelPositionOf(selectedGroup)
+        selectedGroup = group
+        val newPos = wheelPositionOf(selectedGroup)
+        // Rebind only the two changed pills, in place: a full
+        // refresh would drop the remote focus mid-scroll.
+        if (oldPos >= 0) wheelAdapter.notifyItemChanged(oldPos)
+        if (newPos >= 0) wheelAdapter.notifyItemChanged(newPos)
+        applySection()
+    }
+
+    private fun rebuildWheel(liveGroups: List<String>) {
+        val newLabels = listOf(getString(R.string.category_all)) + liveGroups
+        if (newLabels == wheelLabels) return
+        if (selectedGroup != null && selectedGroup !in liveGroups) selectedGroup = null
+        wheelLabels = newLabels
+        wheelAdapter.notifyDataSetChanged()
+    }
+
     private fun applySection() {
         val context = requireContext()
         sectionTitle.text = currentSection.title
         val visible = allChannels.filter { !ChannelPrefs.isHidden(context, it) }
+        // The Live TV wheel: distinct group names from live
+        // channels, in first-appearance order, All first.
+        if (currentSection == Section.LIVE) {
+            val liveGroups = visible.filter { it.kind == ChannelKind.LIVE }
+                .map { it.group }.distinct()
+            rebuildWheel(liveGroups)
+            wheelList.visibility = if (liveGroups.isEmpty()) View.GONE else View.VISIBLE
+        } else {
+            wheelList.visibility = View.GONE
+        }
         val sectionChannels = when (currentSection) {
-            Section.LIVE -> visible.filter { it.kind == ChannelKind.LIVE }
+            Section.LIVE -> {
+                val live = visible.filter { it.kind == ChannelKind.LIVE }
+                if (selectedGroup == null) live
+                else live.filter { it.group == selectedGroup }
+            }
             Section.MOVIES -> visible.filter { it.kind == ChannelKind.MOVIE }
             Section.SERIES -> visible.filter { it.kind == ChannelKind.SERIES }
             // Sports is a second view, not a move: a sports channel
@@ -311,6 +377,9 @@ class MainFragment : Fragment() {
                 items += DisplayItem.Header(getString(R.string.scores_live_now))
                 for (game in liveScores.take(12)) items += DisplayItem.Score(game)
             }
+            // One wheel category selected means one group's
+            // channels: headers would just repeat the wheel.
+            val singleGroup = currentSection == Section.LIVE && selectedGroup != null
             val providersPerGroup = sectionChannels.groupBy { it.group }
                 .mapValues { entry -> entry.value.map { it.provider }.distinct() }
             for ((providerAndGroup, groupChannels) in
@@ -325,7 +394,7 @@ class MainFragment : Fragment() {
                 } else {
                     display
                 }
-                items += DisplayItem.Header(header)
+                if (!singleGroup) items += DisplayItem.Header(header)
                 // Numbered channels sort by their provider number;
                 // unnumbered ones keep playlist order (stable sort).
                 val ordered = groupChannels.sortedWith(
@@ -357,6 +426,63 @@ class MainFragment : Fragment() {
         } else if (allChannels.isNotEmpty()) {
             statusText.visibility = View.GONE
         }
+        // First content with nothing focused puts focus on the
+        // wheel for Live TV, so left/right switches categories
+        // at once instead of leaving the remote with nowhere to go.
+        // Later applies leave focus alone (a background refresh
+        // must never yank it mid-browse).
+        if (currentSection == Section.LIVE && wheelList.visibility == View.VISIBLE &&
+            view?.findFocus() == null && wheelLabels.isNotEmpty()
+        ) {
+            wheelList.post {
+                (wheelList.layoutManager as LinearLayoutManager)
+                    .findViewByPosition(wheelPositionOf(selectedGroup))?.requestFocus()
+            }
+        }
+    }
+
+    /**
+     * The Live TV category wheel: horizontal pills, remote-first.
+     * Labels[0] is All; the rest are group names. The selected
+     * pill reads blue + bold; focus adds the card highlight.
+     * Scrolling the wheel filters the list below on focus —
+     * no OK press needed — and only the two changed pills
+     * rebind, so focus survives mid-scroll.
+     */
+    private class WheelAdapter(
+        private val labels: () -> List<String>,
+        private val selected: () -> String?,
+        private val onFocusItem: (String?) -> Unit
+    ) : RecyclerView.Adapter<WheelAdapter.Holder>() {
+
+        class Holder(view: View) : RecyclerView.ViewHolder(view) {
+            val label: TextView = view.findViewById(R.id.wheel_label)
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
+            val view = LayoutInflater.from(parent.context)
+                .inflate(R.layout.item_category_wheel, parent, false)
+            return Holder(view)
+        }
+
+        override fun onBindViewHolder(holder: Holder, position: Int) {
+            val label = labels()[position]
+            val group = if (position == 0) null else label
+            holder.label.text = label
+            val isSelected = group == selected()
+            holder.label.setTextColor(
+                if (isSelected) 0xFF38BDF8.toInt() else 0xFFFFFFFF.toInt()
+            )
+            holder.label.typeface =
+                if (isSelected) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+            holder.itemView.onFocusChangeListener =
+                View.OnFocusChangeListener { _, hasFocus ->
+                    if (hasFocus) onFocusItem(group)
+                }
+            holder.itemView.setOnClickListener { onFocusItem(group) }
+        }
+
+        override fun getItemCount(): Int = labels().size
     }
 
     private class ChannelAdapter(

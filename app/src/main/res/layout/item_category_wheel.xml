@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One category in the Live TV wheel: a focusable pill. The
+     selected category reads blue + bold; focus adds the card
+     highlight on top, so both states stay visible at once. -->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/wheel_label"
+    android:layout_width="wrap_content"
+    android:layout_height="64dp"
+    android:background="@drawable/item_focus_bg"
+    android:clickable="true"
+    android:focusable="true"
+    android:gravity="center_vertical"
+    android:paddingStart="20dp"
+    android:paddingEnd="20dp"
+    android:textColor="#FFFFFF"
+    android:textSize="20sp" />
