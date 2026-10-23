@@ -1,6 +1,66 @@
-outcome=success
-run_id=40015726452
-run_number=5
-sha=a1cc4b3d557aa4d87015e1ca17fa514bda01a30a
-apk_size=7672970
-apk_sha256=87ddd5518949350210f25a4c6ecfdb9b2fd99579abd71ad3e81d26aa02d7037f
+outcome=failure
+run_id=40022903893
+run_number=6
+sha=0299162a1b9544089db831c79dbecf372c4d210b
+apk_missing=true
+--- build.log tail ---
+    Caused by: java.lang.RuntimeException: Error while processing /home/runner/work/TyTv/TyTv/app/src/main/res/drawable/app_icon.xml : Cannot invoke "org.w3c.dom.Node.getNodeValue()" because the return value of "org.w3c.dom.NamedNodeMap.getNamedItem(String)" is null
+    	at com.android.ide.common.resources.MergedResourceWriter$FileGenerationWorkAction.run(MergedResourceWriter.java:418)
+    	at com.android.build.gradle.internal.tasks.Workers$RunnableWrapperWorkAction.run(Workers.kt:181)
+    	at com.android.build.gradle.internal.profile.ProfileAwareWorkAction.execute(ProfileAwareWorkAction.kt:74)
+    	at org.gradle.workers.internal.DefaultWorkerServer.execute(DefaultWorkerServer.java:63)
+    	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:66)
+    	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:62)
+    	at org.gradle.internal.classloader.ClassLoaderUtils.executeInClassloader(ClassLoaderUtils.java:100)
+    	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.lambda$execute$0(NoIsolationWorkerFactory.java:62)
+    	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:44)
+    	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:41)
+    	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:200)
+    	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:195)
+    	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+    	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+    	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:157)
+    	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+    	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+    	at org.gradle.internal.operations.DefaultBuildOperationExecutor.call(DefaultBuildOperationExecutor.java:73)
+    	at org.gradle.workers.internal.AbstractWorker.executeWrappedInBuildOperation(AbstractWorker.java:41)
+    	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.execute(NoIsolationWorkerFactory.java:59)
+    	at org.gradle.workers.internal.DefaultWorkerExecutor.lambda$submitWork$0(DefaultWorkerExecutor.java:174)
+    	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+    	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runExecution(DefaultConditionalExecutionQueue.java:187)
+    	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.access$700(DefaultConditionalExecutionQueue.java:120)
+    	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner$1.run(DefaultConditionalExecutionQueue.java:162)
+    	at org.gradle.internal.Factories$1.create(Factories.java:31)
+    	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:264)
+    	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:128)
+    	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:133)
+    	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runBatch(DefaultConditionalExecutionQueue.java:157)
+    	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.run(DefaultConditionalExecutionQueue.java:126)
+    	... 7 more
+    Caused by: java.lang.NullPointerException: Cannot invoke "org.w3c.dom.Node.getNodeValue()" because the return value of "org.w3c.dom.NamedNodeMap.getNamedItem(String)" is null
+    	at com.android.ide.common.vectordrawable.VdPath.addGradientIfExists(VdPath.java:628)
+    	at com.android.ide.common.vectordrawable.VdTree.parseTree(VdTree.java:149)
+    	at com.android.ide.common.vectordrawable.VdTree.parse(VdTree.java:129)
+    	at com.android.ide.common.vectordrawable.VdParser.parse(VdParser.java:38)
+    	at com.android.ide.common.vectordrawable.VdPreview.getPreviewFromVectorXml(VdPreview.java:202)
+    	at com.android.builder.png.VectorDrawableRenderer.generateFile(VectorDrawableRenderer.java:275)
+    	at com.android.build.gradle.tasks.MergeResources$MergeResourcesVectorDrawableRenderer.generateFile(MergeResources.kt:650)
+    	at com.android.ide.common.resources.MergedResourceWriter$FileGenerationWorkAction.run(MergedResourceWriter.java:410)
+    	... 37 more
+    
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:mergeDebugResources'.
+> A failure occurred while executing com.android.build.gradle.internal.tasks.Workers$RunnableWrapperWorkAction
+   > Error while processing /home/runner/work/TyTv/TyTv/app/src/main/res/drawable/app_banner.xml : Cannot invoke "org.w3c.dom.Node.getNodeValue()" because the return value of "org.w3c.dom.NamedNodeMap.getNamedItem(String)" is null
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 1m 5s
+6 actionable tasks: 6 executed
