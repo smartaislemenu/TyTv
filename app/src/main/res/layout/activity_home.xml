@@ -1,64 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Apollo-style home: category sidebar on the left, fast-scrolling
-     windowed list on the right. The list is a RecyclerView, so only
-     visible rows are bound — thousands of channels scroll smoothly,
-     unlike the old one-card-per-channel rows. -->
+<!-- Section screen: full width, title up top, content filling the
+     screen — the Startup Show pattern adapted to TV + remote.
+     Opened from a home tile; Back returns to the home tiles. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#111827"
-    android:orientation="horizontal">
+    android:background="#000000"
+    android:orientation="vertical">
 
-    <LinearLayout
-        android:layout_width="280dp"
-        android:layout_height="match_parent"
-        android:orientation="vertical">
+    <TextView
+        android:id="@+id/section_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingStart="32dp"
+        android:paddingTop="28dp"
+        android:paddingEnd="32dp"
+        android:paddingBottom="12dp"
+        android:textColor="#FFFFFF"
+        android:textSize="30sp"
+        android:textStyle="bold" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:padding="24dp"
-            android:text="TYTV"
-            android:textColor="#FFFFFF"
-            android:textSize="28sp"
-            android:textStyle="bold" />
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/sidebar_list"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:nextFocusRight="@+id/channel_list" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/channel_list"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
         android:layout_weight="1"
-        android:orientation="vertical">
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="16dp" />
 
-        <TextView
-            android:id="@+id/section_title"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:padding="24dp"
-            android:textColor="#FFFFFF"
-            android:textSize="24sp" />
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/channel_list"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:nextFocusLeft="@id/sidebar_list" />
-
-        <TextView
-            android:id="@+id/status_text"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:padding="24dp"
-            android:textColor="#9CA3AF"
-            android:textSize="18sp"
-            android:visibility="gone" />
-    </LinearLayout>
+    <TextView
+        android:id="@+id/status_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="24dp"
+        android:textColor="#9CA3AF"
+        android:textSize="18sp"
+        android:visibility="gone" />
 </LinearLayout>

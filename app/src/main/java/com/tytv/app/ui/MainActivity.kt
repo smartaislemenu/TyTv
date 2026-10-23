@@ -34,7 +34,7 @@ class MainActivity : FragmentActivity() {
         setContentView(R.layout.activity_main)
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
-                .replace(R.id.fragment_container, MainFragment())
+                .replace(R.id.fragment_container, HomeFragment())
                 .commit()
             checkForUpdateSilently()
         }

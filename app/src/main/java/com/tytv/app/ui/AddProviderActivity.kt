@@ -2,12 +2,9 @@ package com.tytv.app.ui
 
 import android.os.Bundle
 import android.view.View
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
-import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.FragmentActivity
@@ -18,18 +15,25 @@ import com.tytv.app.data.ProviderStore
  * Provider-add form, remote friendly: arrows move focus, select opens
  * the on-screen keyboard for a field or saves.
  *
- * Two provider types: an M3U playlist URL, or an Xtream Codes login
- * (server address + username + password for the provider's own
- * player_api.php). Xtream credentials stay on this device only and
- * go nowhere except that provider's own server.
+ * Two provider types, as two plain buttons — never a dropdown: an
+ * M3U playlist URL, or an Xtream Codes login (server address +
+ * username + password for the provider's own player_api.php).
+ * Xtream credentials stay on this device only and go nowhere
+ * except that provider's own server. The home hero passes
+ * EXTRA_TYPE so the choice the user already made stays made.
  */
 class AddProviderActivity : FragmentActivity() {
+
+    companion object {
+        const val EXTRA_TYPE = "provider_type"
+        const val TYPE_M3U = "M3U"
+        const val TYPE_XTREAM = "XTREAM"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_provider)
         val nameInput = findViewById<EditText>(R.id.provider_name_input)
-        val typeSpinner = findViewById<Spinner>(R.id.provider_type_spinner)
         val m3uGroup = findViewById<LinearLayout>(R.id.m3u_group)
         val urlInput = findViewById<EditText>(R.id.provider_url_input)
         val xtreamGroup = findViewById<LinearLayout>(R.id.xtream_group)
@@ -40,34 +44,24 @@ class AddProviderActivity : FragmentActivity() {
         findViewById<TextView>(R.id.xtream_note).text =
             getString(R.string.xtream_note)
 
-        val types = listOf(
-            getString(R.string.provider_type_m3u),
-            getString(R.string.provider_type_xtream)
-        )
-        // Custom item layouts: the platform default uses dark text,
-        // which is unreadable on this app's dark background — the
-        // dropdown looked blank on TV. White text on both states.
-        typeSpinner.adapter = ArrayAdapter(
-            this,
-            R.layout.item_spinner,
-            types
-        ).apply {
-            setDropDownViewResource(R.layout.item_spinner_dropdown)
+        // Two buttons, not a dropdown: the type is always visible,
+        // and the selected one reads as selected at a glance.
+        var isXtream = intent.getStringExtra(EXTRA_TYPE) == TYPE_XTREAM
+        val m3uButton = findViewById<Button>(R.id.provider_type_m3u_button)
+        val xtreamButton = findViewById<Button>(R.id.provider_type_xtream_button)
+        fun updateType() {
+            m3uGroup.visibility = if (isXtream) View.GONE else View.VISIBLE
+            xtreamGroup.visibility = if (isXtream) View.VISIBLE else View.GONE
+            m3uButton.setBackgroundColor(
+                if (isXtream) 0xFF374151.toInt() else 0xFF1E40AF.toInt()
+            )
+            xtreamButton.setBackgroundColor(
+                if (isXtream) 0xFF1E40AF.toInt() else 0xFF374151.toInt()
+            )
         }
-        typeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(
-                parent: AdapterView<*>?,
-                view: View?,
-                position: Int,
-                id: Long
-            ) {
-                val isXtream = position == 1
-                m3uGroup.visibility = if (isXtream) View.GONE else View.VISIBLE
-                xtreamGroup.visibility = if (isXtream) View.VISIBLE else View.GONE
-            }
-
-            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
-        }
+        m3uButton.setOnClickListener { isXtream = false; updateType() }
+        xtreamButton.setOnClickListener { isXtream = true; updateType() }
+        updateType()
 
         val saveButton = findViewById<Button>(R.id.save_button)
         // Done on the last field's keyboard saves, so there is
@@ -82,7 +76,6 @@ class AddProviderActivity : FragmentActivity() {
         }
         saveButton.setOnClickListener {
             val name = nameInput.text.toString().trim()
-            val isXtream = typeSpinner.selectedItemPosition == 1
             if (name.isEmpty() || name.contains('|')) {
                 Toast.makeText(this, R.string.provider_name_invalid, Toast.LENGTH_SHORT).show()
                 return@setOnClickListener

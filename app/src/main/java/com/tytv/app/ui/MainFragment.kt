@@ -69,13 +69,20 @@ class MainFragment : Fragment() {
         data class Score(val game: ScoresApi.Game) : DisplayItem()
     }
 
-    private val sidebarTitles = listOf(
-        "Live TV", "Movies", "Series", "Sports", "Favorites", "Recent",
-        "Guide", "Search", "Recordings", "Settings", "Refresh", "Grid guide",
-        "Scores"
-    )
+    companion object {
+        private const val ARG_SECTION = "section"
+        private const val ARG_FORCE_REFRESH = "force_refresh"
 
-    private lateinit var sidebarList: RecyclerView
+        fun newInstance(section: String, forceRefresh: Boolean): MainFragment {
+            return MainFragment().apply {
+                arguments = Bundle().apply {
+                    putString(ARG_SECTION, section)
+                    putBoolean(ARG_FORCE_REFRESH, forceRefresh)
+                }
+            }
+        }
+    }
+
     private lateinit var channelList: RecyclerView
     private lateinit var sectionTitle: TextView
     private lateinit var statusText: TextView
@@ -98,15 +105,10 @@ class MainFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        sidebarList = view.findViewById(R.id.sidebar_list)
         channelList = view.findViewById(R.id.channel_list)
         sectionTitle = view.findViewById(R.id.section_title)
         statusText = view.findViewById(R.id.status_text)
 
-        sidebarList.layoutManager = LinearLayoutManager(requireContext())
-        sidebarList.adapter = SidebarAdapter(sidebarTitles) { position ->
-            onSidebarSelected(position)
-        }
         channelList.layoutManager = LinearLayoutManager(requireContext())
         channelAdapter = ChannelAdapter(
             onClick = { channel -> ChannelMenu.play(requireContext(), channel) },
@@ -120,11 +122,20 @@ class MainFragment : Fragment() {
         )
         channelList.adapter = channelAdapter
 
-        sidebarList.post {
-            (sidebarList.layoutManager as LinearLayoutManager)
+        // The section arrives from the home tile; the Refresh tile
+        // asks for a forced reload instead of the cached load.
+        val initialSection = try {
+            Section.valueOf(arguments?.getString(ARG_SECTION) ?: "LIVE")
+        } catch (e: IllegalArgumentException) {
+            Section.LIVE
+        }
+        val startForceRefresh = arguments?.getBoolean(ARG_FORCE_REFRESH) ?: false
+        switchSection(initialSection)
+        channelList.post {
+            (channelList.layoutManager as LinearLayoutManager)
                 .findViewByPosition(0)?.requestFocus()
         }
-        load(forceRefresh = false, silent = false)
+        load(forceRefresh = startForceRefresh, silent = false)
     }
 
     override fun onResume() {
@@ -134,24 +145,6 @@ class MainFragment : Fragment() {
         val now = System.currentTimeMillis()
         if (initialLoadDone && now - lastRefreshMs > 60_000) {
             refreshInBackground()
-        }
-    }
-
-    private fun onSidebarSelected(position: Int) {
-        when (position) {
-            0 -> switchSection(Section.LIVE)
-            1 -> switchSection(Section.MOVIES)
-            2 -> switchSection(Section.SERIES)
-            3 -> switchSection(Section.SPORTS)
-            4 -> switchSection(Section.FAVORITES)
-            5 -> switchSection(Section.RECENT)
-            6 -> startActivity(Intent(requireContext(), GuideActivity::class.java))
-            7 -> startActivity(Intent(requireContext(), SearchActivity::class.java))
-            8 -> startActivity(Intent(requireContext(), RecordingsActivity::class.java))
-            9 -> startActivity(Intent(requireContext(), SettingsActivity::class.java))
-            10 -> load(forceRefresh = true, silent = false)
-            11 -> startActivity(Intent(requireContext(), GridGuideActivity::class.java))
-            12 -> startActivity(Intent(requireContext(), ScoresActivity::class.java))
         }
     }
 
@@ -364,30 +357,6 @@ class MainFragment : Fragment() {
         } else if (allChannels.isNotEmpty()) {
             statusText.visibility = View.GONE
         }
-    }
-
-    private class SidebarAdapter(
-        private val titles: List<String>,
-        private val onSelected: (Int) -> Unit
-    ) : RecyclerView.Adapter<SidebarAdapter.Holder>() {
-
-        class Holder(view: View) : RecyclerView.ViewHolder(view) {
-            val title: TextView = view.findViewById(R.id.sidebar_title)
-        }
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
-            val view = LayoutInflater.from(parent.context)
-                .inflate(R.layout.item_sidebar, parent, false)
-            FontApplier.apply(view)
-            return Holder(view)
-        }
-
-        override fun onBindViewHolder(holder: Holder, position: Int) {
-            holder.title.text = titles[position]
-            holder.itemView.setOnClickListener { onSelected(position) }
-        }
-
-        override fun getItemCount(): Int = titles.size
     }
 
     private class ChannelAdapter(
