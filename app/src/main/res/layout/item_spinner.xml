@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Spinner closed-item text. The platform default item uses dark
+     text, which is unreadable on this app's dark background — the
+     type dropdown looked empty/blank on TV. White text fixes that. -->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="16dp"
+    android:textColor="#FFFFFF"
+    android:textSize="20sp" />

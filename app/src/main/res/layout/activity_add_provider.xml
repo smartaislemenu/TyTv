@@ -1,111 +1,130 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Provider-add form. The root MUST be a ScrollView: on a TV the
+     form is taller than the screen (title + name + type + three
+     Xtream fields + note + EPG field + Save), and a plain
+     LinearLayout left the Save button below the bottom edge with
+     no way to reach it by remote. With scrolling, D-pad down always
+     brings the next field — and Save — into view. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#111827"
-    android:orientation="vertical"
-    android:padding="48dp">
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/add_provider_title"
-        android:textColor="#FFFFFF"
-        android:textSize="28sp" />
-
-    <EditText
-        android:id="@+id/provider_name_input"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:hint="@string/provider_name_hint"
-        android:inputType="text"
-        android:textColor="#FFFFFF"
-        android:textColorHint="#9CA3AF" />
-
-    <Spinner
-        android:id="@+id/provider_type_spinner"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp" />
+    android:fillViewport="true">
 
     <LinearLayout
-        android:id="@+id/m3u_group"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
-
-        <EditText
-            android:id="@+id/provider_url_input"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:hint="@string/provider_url_hint"
-            android:inputType="textUri"
-            android:textColor="#FFFFFF"
-            android:textColorHint="#9CA3AF" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/xtream_group"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:visibility="gone">
+        android:padding="48dp">
 
-        <EditText
-            android:id="@+id/xtream_server_input"
-            android:layout_width="match_parent"
+        <TextView
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:hint="@string/xtream_server_hint"
-            android:inputType="textUri"
+            android:text="@string/add_provider_title"
             android:textColor="#FFFFFF"
-            android:textColorHint="#9CA3AF" />
+            android:textSize="28sp" />
 
         <EditText
-            android:id="@+id/xtream_user_input"
+            android:id="@+id/provider_name_input"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:hint="@string/xtream_user_hint"
+            android:layout_marginTop="32dp"
+            android:hint="@string/provider_name_hint"
+            android:imeOptions="actionNext"
             android:inputType="text"
             android:textColor="#FFFFFF"
             android:textColorHint="#9CA3AF" />
 
-        <EditText
-            android:id="@+id/xtream_pass_input"
+        <Spinner
+            android:id="@+id/provider_type_spinner"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:hint="@string/xtream_pass_hint"
-            android:inputType="textPassword"
+            android:background="@drawable/item_focus_bg" />
+
+        <LinearLayout
+            android:id="@+id/m3u_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <EditText
+                android:id="@+id/provider_url_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:hint="@string/provider_url_hint"
+                android:imeOptions="actionNext"
+                android:inputType="textUri"
+                android:textColor="#FFFFFF"
+                android:textColorHint="#9CA3AF" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/xtream_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <EditText
+                android:id="@+id/xtream_server_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:hint="@string/xtream_server_hint"
+                android:imeOptions="actionNext"
+                android:inputType="textUri"
+                android:textColor="#FFFFFF"
+                android:textColorHint="#9CA3AF" />
+
+            <EditText
+                android:id="@+id/xtream_user_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:hint="@string/xtream_user_hint"
+                android:imeOptions="actionNext"
+                android:inputType="text"
+                android:textColor="#FFFFFF"
+                android:textColorHint="#9CA3AF" />
+
+            <EditText
+                android:id="@+id/xtream_pass_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:hint="@string/xtream_pass_hint"
+                android:imeOptions="actionNext"
+                android:inputType="textPassword"
+                android:textColor="#FFFFFF"
+                android:textColorHint="#9CA3AF" />
+
+            <TextView
+                android:id="@+id/xtream_note"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:textColor="#9CA3AF"
+                android:textSize="16sp" />
+        </LinearLayout>
+
+        <EditText
+            android:id="@+id/epg_url_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:hint="@string/epg_url_hint"
+            android:imeOptions="actionDone"
+            android:inputType="textUri"
             android:textColor="#FFFFFF"
             android:textColorHint="#9CA3AF" />
 
-        <TextView
-            android:id="@+id/xtream_note"
-            android:layout_width="match_parent"
+        <Button
+            android:id="@+id/save_button"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:textColor="#9CA3AF"
-            android:textSize="16sp" />
+            android:layout_marginTop="32dp"
+            android:text="@string/save_provider" />
     </LinearLayout>
-
-    <EditText
-        android:id="@+id/epg_url_input"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:hint="@string/epg_url_hint"
-        android:inputType="textUri"
-        android:textColor="#FFFFFF"
-        android:textColorHint="#9CA3AF" />
-
-    <Button
-        android:id="@+id/save_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:text="@string/save_provider" />
-</LinearLayout>
+</ScrollView>

@@ -44,12 +44,15 @@ class AddProviderActivity : FragmentActivity() {
             getString(R.string.provider_type_m3u),
             getString(R.string.provider_type_xtream)
         )
+        // Custom item layouts: the platform default uses dark text,
+        // which is unreadable on this app's dark background — the
+        // dropdown looked blank on TV. White text on both states.
         typeSpinner.adapter = ArrayAdapter(
             this,
-            android.R.layout.simple_spinner_item,
+            R.layout.item_spinner,
             types
         ).apply {
-            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            setDropDownViewResource(R.layout.item_spinner_dropdown)
         }
         typeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(
@@ -66,7 +69,18 @@ class AddProviderActivity : FragmentActivity() {
             override fun onNothingSelected(parent: AdapterView<*>?) = Unit
         }
 
-        findViewById<Button>(R.id.save_button).setOnClickListener {
+        val saveButton = findViewById<Button>(R.id.save_button)
+        // Done on the last field's keyboard saves, so there is
+        // always a way forward without hunting for the button.
+        epgInput.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
+                saveButton.performClick()
+                true
+            } else {
+                false
+            }
+        }
+        saveButton.setOnClickListener {
             val name = nameInput.text.toString().trim()
             val isXtream = typeSpinner.selectedItemPosition == 1
             if (name.isEmpty() || name.contains('|')) {

@@ -297,3 +297,12 @@
   `clearOverridesOfType`. Both one-line fixes ride the same commit as
   the EPG slice, so the next CI run builds build #3 + fixes + EPG
   together as the single test build.
+- ADD-PROVIDER FORM FIX (Oct 23, on-device test blocker): the form's
+  root was a plain LinearLayout, so on TV the Save button sat below
+  the bottom edge with no way to reach it by remote after the
+  password field — Tyler could not complete an Xtream login. Fix:
+  ScrollView root (D-pad down always reaches Save), white-text
+  spinner item layouts (the platform default's dark text was
+  unreadable on the dark background — the type dropdown looked
+  blank), visible focus background on the spinner, actionNext chain
+  on the fields, and Done on the last field triggers Save.
